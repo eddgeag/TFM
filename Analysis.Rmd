@@ -1,0 +1,55 @@
+---
+title: Integration of omics and clinical data of the hormonal, metabolic, inflammatory,
+  and oxidative response in the different macronutrients of the diet
+author: "Edmond Geraud"
+subtitle: '`r params$subtitulo`'
+date: '`r format(Sys.Date(),"%e de %B, %Y")`' 
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: true
+    theme: united
+    highlight: tango
+header-includes:
+  - \usepackage[english]{babel}
+params:
+  file_IP: Integromics_IPmarkers.xlsx
+  file_metabolome: Integromics_Metabolome.xlsx
+  file_general: Integromics_1.xlsx
+  folder.data: ../../datos
+  subtitulo: Statistical Analysis
+geometry: margin=2cm
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+# include this code chunk as-is to set options
+opts_chunk$set(comment = NA, prompt = TRUE, tidy = T, 
+               fig.width = 7, fig.height = 7,echo = TRUE, 
+               message = FALSE, warning = FALSE, cache=TRUE)
+Sys.setlocale("LC_TIME", "C")
+```
+
+## Prepare libraries.
+
+```{r libraries}
+list.of.packages <- c("xlsx")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+lapply(list.of.packages, require,character.only = T)
+
+```
+
+
+## Read data
+
+First of all we'll read all data.
+```{r ambiente}
+library(xlsx)
+general<-file.path(params$folder.data,file=params$file_general)
+general_data<-read.xlsx(general,sheetIndex = 1)
+metabolome<-file.path(params$folder.data,file=params$file_metabolome)
+permeability<-file.path(params$folder.data,file = params$file_IP)
+```
+

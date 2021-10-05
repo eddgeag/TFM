@@ -17,6 +17,7 @@ params:
   file_IP: Integromics_IPmarkers.xlsx
   file_metabolome: Integromics_Metabolome.xlsx
   file_general: Integromics_1.xlsx
+  file_microbiota : integromics_microbiota.xlsx
   folder.data: ../../datos
   subtitulo: Statistical Analysis
 geometry: margin=2cm
@@ -34,11 +35,13 @@ Sys.setlocale("LC_TIME", "C")
 ## Prepare libraries.
 
 ```{r libraries}
-list.of.packages <- c("xlsx")
+list.of.packages <- c("xlsx","kableExtra")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, require,character.only = T)
 
+
+lapply(list.of.packages, require, character.only = TRUE)
 ```
 
 
@@ -46,10 +49,154 @@ lapply(list.of.packages, require,character.only = T)
 
 First of all we'll read all data.
 ```{r ambiente}
-library(xlsx)
 general<-file.path(params$folder.data,file=params$file_general)
-general_data<-read.xlsx(general,sheetIndex = 1)
 metabolome<-file.path(params$folder.data,file=params$file_metabolome)
 permeability<-file.path(params$folder.data,file = params$file_IP)
+microbiome <- file.path(params$folder.data,file = params$file_microbiota)
 ```
+
+### Description of the clinical data.
+
+
+```{r datos_clinicos}
+general_data<-read.xlsx(general,sheetIndex = 1)
+general_data.comments <- read.xlsx(general,sheetIndex = 2)
+general_data.descripcion<-read.xlsx(general,sheetIndex = 3)
+```
+
+
+We have 53 samples and 61 variables. The first two variables are the index of the patients, and the second column is the patient identification. Because the first column is an index we can get rid off.
+
+In order to understand the data, we have all basal levels, but there are some in which they have only 1 day and other the mean of the three days. 
+
+
+The meaning of the 61 variables are:
+
+| Variable 	| Description 	|
+|:---:	|:---:	|
+| Orden 	| Order of the subjects 	|
+| Paciente 	| Women contol (M),PCOS women (P),Male (V), d (Not obese), O (Obese), GLP (challenge macronutrients: glucose, lipids, proteins) 	|
+|  	<br>SEX 	| 0 Women, 2 Male 	|
+|  	<br>GROUP 	| 0 Women Control, 1 PCOS, 2 Male 	|
+|  	<br>OBESE 	| 0 Not obese, 1 Obese 	|
+| EDAD 	| Age 	|
+| BMI 	| Body Mass Index 	|
+| WC 	| Waist circumference 	|
+| WHR 	| Waist to hip ratio 	|
+| SHBG 	| Sex hormone-binding protein 	|
+| TOTAL_TEST 	| Total testosterone (T) 	|
+| FREE_TEST 	| Free testosterone 	|
+| Total_ESTR 	| Total estradiol (E2) 	|
+| Free_ESTRA 	| Free estradiol 	|
+| RatioFreeTE2 	| Free T/FreeE2 ratio 	|
+| hsCRP 	| High sensitivity C-reactive protein 	|
+| InsulinaBasal_mean 	| Mean basal insluin 	|
+| GlucosaBasal_mean 	| Mean basal glucose 	|
+| SOG_ISI 	| Insulin sensitivity index (it is only calculated on the challenge oralglucose day) 	|
+| HOMAIRmean 	| Homeostasis model assessment of insulin resistance (mean of the three days) 	|
+| TGmean 	| Triglicerids (Basal. mean of the three challenges) 	|
+| COLmean 	| Total Cholesterol (Basal. mean of the three challenges) 	|
+| HDLmean 	| HDL Cholesterol (Basal. mean of the three challenges) 	|
+| LDLmean 	| LDL Cholesterol (Basal. mean of the three challenges) 	|
+| SOG_INS_B 	| Basal insulin when challenge oral glucose day 	|
+| SOL_INS_B 	| Basal insulin when challenge oral lipid day 	|
+| SOP_INS_B 	| Basal insulin when challenge oral protein day 	|
+| SOG_GLC_B 	| Basal glucose when challenge oral glucose day 	|
+| SOL_GLC_B 	| Basal glucose when challenge oral lipid day 	|
+| SOP_GLC_B 	| Basal glucose when challenge oral protein day 	|
+| SOG_HOMAIR 	| HOMAIR Glucose Oral Challenge day 	|
+| SOL_HOMAIR 	| HOMAIR Lipid Oral Challenge day 	|
+| SOP_HOMAIR 	| HOMAIR Protein Oral Challenge day 	|
+| SOG_INS_AUC 	| Area Under the Curve of the insulin on Glucose Oral Challenge 	|
+| SOL_INS_AUC 	| Area Under the Curve of the insulin on Lipids Oral Challenge 	|
+| SOP_INS_AUC 	| Area Under the Curve of the insulin on Proteins Oral Challenge 	|
+| SOG_GLU_AUC 	| Area Under the Curve of the Glucose on Glucose Oral Challenge 	|
+| SOL_GLU_AUC 	| Area Under the Curve of the Glucose on Lipids Oral Challenge 	|
+| SOP_GLU_AUC 	| Area Under the Curve of the Glucose on ProteinsOral Challenge 	|
+| SOG_TG_0 	| Triglicerids at basal level on Glucose Oral Challenge 	|
+| SOL_TG_0 	| Triglicerids at basal level on Lipid Oral Challenge 	|
+| SOP_TG_0 	| Triglicerids at basal level on Protein Oral Challenge 	|
+| SOGAUCTG 	| Triglicerids Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCTG 	| Triglicerids Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCTG 	| Triglicerids Area Under the Curve Oral Proteins Challenge 	|
+| SOG_COL_0 	| Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_COL_0 	| Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_COL_0 	| Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCCOL 	| Cholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCCOL 	| Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCCOL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+| SOG_HDL_0 	| HDL Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_HDL_0 	| HDL Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_HDL_0 	| HDL Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCHDL 	| HDLCholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+| SOG_LDL_0 	| LDL Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_LDL_0 	| LDL Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_LDL_0 	| LDL Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+
+
+In general SOG means Glucose Oral Challenge, SOL: Lipid Oral challenge, and SOP Protein Oral challenge.
+
+It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absortion of lipids by the intestine is slower. 
+
+
+### Description of the metabolome.
+
+```{r metabolome_Data}
+metabolome_data<-read.xlsx(metabolome,sheetIndex = 1)
+metabolome_data.comments <- as.data.frame(read.xlsx(metabolome,sheetIndex = 2)[,1:3])
+colnames(metabolome_data.comments)<-c("Variable","Metabolites","Code")
+kbl(metabolome_data.comments, caption = "Metabolites", booktabs = F) %>%
+kable_classic_2()
+```
+
+### Description of the microbiome.
+
+```{r}
+phylum <- read.xlsx(microbiome,sheetIndex = 1)
+phylum.relative <- read.xlsx(microbiome,sheetIndex = 2)
+phylum.gendre <- read.xlsx(microbiome,sheetIndex = 3)
+phylum.gendre.relative <- read.xlsx(microbiome,sheetIndex = 4)
+phylum.comments <- read.xlsx(microbiome,sheetIndex = 5)
+```
+
+### Description of the Intstinal Permeability Markers data-set.
+
+```{r}
+
+```
+
+
+Let's observe if there is any missing value, also, we want to know de dimensions of the data.
+
+```{r structureClinicalData}
+anyNA(general_data) ## there is no NA
+dim(general_data)
+str(general_data)
+```
+
+```{r processClinicalData}
+
+
+general_data[,2:4]<-lapply(general_data[,2:4],factor)
+
+```
+
+```{r}
+# levels(general_data$SEX)<-c("mujer","varon")
+# levels(general_data$GROUP)<-c("mujer control","PCOS","varon")
+# levels(general_data$OBESE)<-c("No obeso","Obeso")
+# str(general_data)
+```
+
+
+
+
+
+
+
 

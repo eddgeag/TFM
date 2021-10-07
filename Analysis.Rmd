@@ -35,34 +35,215 @@ Sys.setlocale("LC_TIME", "C")
 ## Prepare libraries.
 
 ```{r libraries}
-list.of.packages <- c("xlsx","kableExtra")
+list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
-lapply(list.of.packages, require,character.only = T)
+res<-unlist(lapply(list.of.packages, require,character.only = T))
+if(any(res==F)){
+  list.of.packages[which(res==F)]
+}
 
-
-lapply(list.of.packages, require, character.only = TRUE)
 ```
 
 
-## Read data
+## Description of the data
 
-First of all we'll read all data.
-```{r ambiente}
-general<-file.path(params$folder.data,file=params$file_general)
-metabolome<-file.path(params$folder.data,file=params$file_metabolome)
-permeability<-file.path(params$folder.data,file = params$file_IP)
-microbiome <- file.path(params$folder.data,file = params$file_microbiota)
-```
+
 
 ### Description of the clinical data.
 
-
-```{r datos_clinicos}
+First of all we'll read all data.
+```{r clnical_Data}
+general<-file.path(params$folder.data,file=params$file_general)
 general_data<-read.xlsx(general,sheetIndex = 1)
 general_data.comments <- read.xlsx(general,sheetIndex = 2)
 general_data.descripcion<-read.xlsx(general,sheetIndex = 3)
 ```
+
+```{r process_data}
+general_data$SEX <- factor(general_data$SEX,levels=c(0,2),labels = c("Female","Male"))
+general_data$OBESE <- factor(general_data$OBESE,levels=c(0,1),labels = c("No Obese","Obese"))
+general_data$GROUP <- factor(general_data$GROUP,levels=c(0,1,2),labels = c("Female","PCOS","Male"))
+str(general_data)
+
+```
+
+
+```{r dimensiones_clinicas}
+(n<-nrow(general_data))
+(p<-ncol(general_data[,3:ncol(general_data)]))
+```
+Clinical data consists of 53 subjects. From these subjects, we have:
+
+```{r sexo}
+(sexo<-table(general_data$SEX))
+```
+34 females and 19 males
+
+```{r sexo_obesos}
+(sexo.obesos<-table(general_data$SEX,general_data$OBESE))
+```
+18 females and 10 males normal, and 9 Male obese, and 16 female obese
+
+```{r subgrupos}
+(subgrupos<-table(general_data$GROUP,general_data$OBESE))
+
+```
+
+From the 34 females, 9 non-obese have PCOS and 8 obese have PCOS. 
+
+
+```{r barplot_subgrupos}
+y <- list(grupo=subgrupos)
+par(mfrow=c(1,1))
+for( i in 1:length(y)){
+  y.t <- y[[i]]
+  barplot(y.t, xlim = c(0, ncol(y.t) + 3), col = 1:3, ylab = "Subjects", 
+        legend.text = T, args.legend = list(x = ncol(y.t) + 3, 
+           y = max(colSums(y.t)), bty = "n"))
+  
+}
+```
+
+Also we can check with a chisq-test if there are differences in the groups.
+
+```{r}
+chisq.test(subgrupos)
+```
+There is no relationship between categorical variables.
+
+Regarding the numerical variables, there is an index variable, just to have in order the data. Afterwards, we have the code for the subjects. After the categorical data, there are three variables regarding the body complex and age:
+
+1. Age
+2. BMI: Body mass Index.
+3. WC: Waist circumference
+4. WHR: Waist to hip ratio. 
+
+For these variables, we have the following description. The distribution of  the age of the subjects is the following
+
+```{r}
+nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
+par(mar=c(5.1, 4.1, 1.1, 2.1))
+boxplot(general_data$EDAD, horizontal=TRUE,  outline=FALSE)
+hist(general_data$EDAD,freq = F,main="Histogram of Age",xlab="")
+lines(density(general_data$EDAD))
+```
+
+
+```{r}
+with(general_data,boxplot(EDAD~GROUP))
+```
+Just for sanity check, we perform anova analysis on age, just to be sure that the data is equally distributed.
+
+```{r}
+shapiro.test(general_data$EDAD)
+summary(with(general_data,aov(EDAD~GROUP)))
+```
+
+
+Regarding body complex.
+
+
+```{r}
+nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
+par(mar=c(5.1, 4.1, 1.1, 2.1))
+boxplot(general_data$BMI, horizontal=TRUE,  outline=FALSE)
+hist(general_data$BMI,freq = F,main="Histogram of BMI",xlab="")
+lines(density(general_data$BMI))
+```
+Due to the fact that we have 2 groups, obese and non-obese, it is obviusly that the distribution is bimodal. 
+
+Let's inspect by cSEX.
+
+```{r}
+with(general_data,shapiro.test(BMI))
+
+with(general_data,boxplot(BMI~GROUP))
+with(general_data,kruskal.test(BMI~GROUP))
+```
+We do not observe differences between control groups and PCOS.
+
+```{r}
+with(general_data,boxplot(BMI~SEX))
+with(general_data,wilcox.test(BMI~SEX))
+```
+
+
+Also we do not observe differences between SEX and BMI, Now let's inspect by controls and PCOS.
+
+```{r}
+with(general_data,boxplot(BMI~GROUP))
+with(general_data,kruskal.test(BMI~GROUP))
+```
+
+
+
+We also do not observe differences. 
+
+```{r}
+nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
+par(mar=c(5.1, 4.1, 1.1, 2.1))
+boxplot(general_data$WC, horizontal=TRUE,  outline=FALSE)
+hist(general_data$WC,freq = F,main="Histogram of Waist Circunference",xlab="")
+lines(density(general_data$WC))
+```
+
+Let's inspect Waist Circunferece by GROUP.
+```{r}
+with(general_data,shapiro.test(WC))
+
+with(general_data,boxplot(WC~GROUP))
+with(general_data,kruskal.test(WC~GROUP))
+```
+
+
+Though we observe a slight difference in men, there is not statistical evidence that shows the contraire. Now let's inspect by Obese.
+
+```{r}
+with(general_data,boxplot(WC~OBESE))
+with(general_data,wilcox.test(WC~OBESE))
+```
+
+
+Obviusly, there is a statistical difference between obese and non-obese subjects. 
+
+
+
+```{r}
+nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
+par(mar=c(5.1, 4.1, 1.1, 2.1))
+boxplot(general_data$WHR, horizontal=TRUE,  outline=FALSE)
+hist(general_data$WHR,freq = F,main="Histogram of WHR",xlab="")
+lines(density(general_data$WHR))
+with(general_data,shapiro.test(WHR))
+with(general_data,bartlett.test(WHR~GROUP))
+with(general_data,bartlett.test(WHR~OBESE))
+
+par(mfrow=c(1,3))
+with(general_data,boxplot(WHR~GROUP))
+with(general_data,boxplot(WHR~OBESE))
+with(general_data,boxplot(WHR~OBESE+GROUP))
+
+```
+
+
+
+
+```{r}
+with(general_data,kruskal.test(WHR~GROUP+OBESE+OBESE*GROUP))
+```
+
+
+```{r}
+with(general_data,pairwise.wilcox.test(WHR,GROUP,method="bonferroni"))
+```
+
+
+```{r}
+with(general_data,wilcox.test(WHR~OBESE))
+```
+
+Regarding Wist to Hip Ratio, there is a significance differece, obviusly between obese subjects.
 
 
 We have 53 samples and 61 variables. The first two variables are the index of the patients, and the second column is the patient identification. Because the first column is an index we can get rid off.
@@ -144,59 +325,64 @@ In general SOG means Glucose Oral Challenge, SOL: Lipid Oral challenge, and SOP 
 It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absortion of lipids by the intestine is slower. 
 
 
-### Description of the metabolome.
-
-```{r metabolome_Data}
-metabolome_data<-read.xlsx(metabolome,sheetIndex = 1)
-metabolome_data.comments <- as.data.frame(read.xlsx(metabolome,sheetIndex = 2)[,1:3])
-colnames(metabolome_data.comments)<-c("Variable","Metabolites","Code")
-kbl(metabolome_data.comments, caption = "Metabolites", booktabs = F) %>%
-kable_classic_2()
-```
-
-### Description of the microbiome.
-
-```{r}
-phylum <- read.xlsx(microbiome,sheetIndex = 1)
-phylum.relative <- read.xlsx(microbiome,sheetIndex = 2)
-phylum.gendre <- read.xlsx(microbiome,sheetIndex = 3)
-phylum.gendre.relative <- read.xlsx(microbiome,sheetIndex = 4)
-phylum.comments <- read.xlsx(microbiome,sheetIndex = 5)
-```
-
-### Description of the Intstinal Permeability Markers data-set.
-
-```{r}
-
-```
 
 
-Let's observe if there is any missing value, also, we want to know de dimensions of the data.
+
+## Univariate statistical analysis
+
+### Clinical data 
+
+First of all let's observe the structure of the data and a sample of it. Also let's observe is there any missingvalues. But first of all an extract of the data. 
+
 
 ```{r structureClinicalData}
-anyNA(general_data) ## there is no NA
-dim(general_data)
 str(general_data)
 ```
 
-```{r processClinicalData}
+At first sight, we have 3 factor variables, sex, group, and obese. Furthermore we have the samples names and the order. The other variables are numeric. Thus let's convert into factor those categorical variables
 
-
-general_data[,2:4]<-lapply(general_data[,2:4],factor)
-
-```
 
 ```{r}
-# levels(general_data$SEX)<-c("mujer","varon")
-# levels(general_data$GROUP)<-c("mujer control","PCOS","varon")
-# levels(general_data$OBESE)<-c("No obeso","Obeso")
-# str(general_data)
+general_data.variables <- general_data[,3:ncol(general_data)]
+
+resumen<-function(x){c(min(x),quantile(x,0.25),quantile(x,0.5),mean(x),quantile(x,0.75),max(x),sd(x))}
+
+general_data.sum<-general_data.variables %>%group_by(GROUP,OBESE) %>%
+  summarise(across(where(is.numeric),resumen),n=n())
+
+
 ```
 
 
+```{r}
+with(general_data.variables,table(GROUP,OBESE))
+```
 
 
+```{r}
+histdens_clinical<-function(datos){
+  
+  p<-4:ncol(datos)
+  gr<-(ceiling(sqrt(length(p))))
+  par(mfrow=c(4,4))
+  for ( i in p){
+    
+    hist(datos[,i],freq=F,main = "",xlab =colnames(datos)[i],ylab = "Density",col="lightblue" )
+    lines(density(datos[,i]),col="navy")
+    
+    
+  }
+
+}
+
+both<-union(levels(general_data.variables$GROUP),levels(general_data.variables$GROUP))
+with(general_data.variables,boxplot(EDAD~OBESE:GROUP))
+```
 
 
+```{r}
+histdens_clinical(general_data.variables)
+
+```
 
 

@@ -28,19 +28,22 @@ require(knitr)
 # include this code chunk as-is to set options
 opts_chunk$set(comment = NA, prompt = TRUE, tidy = T, 
                fig.width = 7, fig.height = 7,echo = TRUE, 
-               message = FALSE, warning = FALSE, cache=TRUE)
+               message = FALSE, warning = FALSE, cache=TRUE, fig_caption = TRUE)
 Sys.setlocale("LC_TIME", "C")
 ```
 
 ## Prepare libraries.
 
+In order to have a reproducible research, the following chunk, install the packages if they are not installed and then are loaded into the session.
+
 ```{r libraries}
-list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
-res<-unlist(lapply(list.of.packages, require,character.only = T))
+
+list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])] ## check for packages not installed 
+if(length(new.packages)) install.packages(new.packages) ## install packages if necessary
+res<-unlist(lapply(list.of.packages, require,character.only = T)) ## load packages needed for the session
 if(any(res==F)){
-  list.of.packages[which(res==F)]
+  list.of.packages[which(res==F)]  ## show those package if you have troubles to install.
 }
 
 ```
@@ -52,15 +55,30 @@ if(any(res==F)){
 
 ### Description of the clinical data.
 
-First of all we'll read all data.
+First of all we'll read all data. The route of the data is in the yaml header. The data is in xlsx format. 
 ```{r clnical_Data}
-general<-file.path(params$folder.data,file=params$file_general)
-general_data<-read.xlsx(general,sheetIndex = 1)
-general_data.comments <- read.xlsx(general,sheetIndex = 2)
-general_data.descripcion<-read.xlsx(general,sheetIndex = 3)
+general<-file.path(params$folder.data,file=params$file_general) ## file path of the data
+general_data<-read.xlsx(general,sheetIndex = 1) ## data
+general_data.comments <- read.xlsx(general,sheetIndex = 2) ## comments about the data
+general_data.descripcion<-read.xlsx(general,sheetIndex = 3) ## description of the data.
 ```
 
+```{r}
+str(general_data) ## show general information of the data
+nrow(general_data) ## number of observations
+ncol(general_data) ## number of variables
+```
+
+
+We have 53 samples and 61 variables. The first two variables are the index of the patients, and the second column is the patient identification. From the `str` function we can observe that the categorical variables are as character. Thus we have to change to factor variables. Furthermore, a recodification of the values is needed as follows:
+
+1. `SEX` variable is coded as 0 and 2,  being females and males respectively, recoded as `Female` and `Male`
+2. `OBESE` variable is coded as 0 and 1, being non-obese subjects and obese subjects respectively, recoded as `No obese`and `obese`
+3. `GROUP` variable is coded as 0,1,and 2, being females, women with PCOS and males, recoded as `Female`, `PCOS` and `Male` respectively.
+
+
 ```{r process_data}
+## recode data as above
 general_data$SEX <- factor(general_data$SEX,levels=c(0,2),labels = c("Female","Male"))
 general_data$OBESE <- factor(general_data$OBESE,levels=c(0,1),labels = c("No Obese","Obese"))
 general_data$GROUP <- factor(general_data$GROUP,levels=c(0,1,2),labels = c("Female","PCOS","Male"))
@@ -68,185 +86,674 @@ str(general_data)
 
 ```
 
-
-```{r dimensiones_clinicas}
-(n<-nrow(general_data))
-(p<-ncol(general_data[,3:ncol(general_data)]))
-```
-Clinical data consists of 53 subjects. From these subjects, we have:
-
-```{r sexo}
+Firstly we perform tables across `SEX,OBESE` and `GROUP` variables, to keep in mind the main structure of the study and to perform the next descriptive table.
+```{r intialtables}
 (sexo<-table(general_data$SEX))
-```
-34 females and 19 males
 
-```{r sexo_obesos}
 (sexo.obesos<-table(general_data$SEX,general_data$OBESE))
-```
-18 females and 10 males normal, and 9 Male obese, and 16 female obese
 
-```{r subgrupos}
 (subgrupos<-table(general_data$GROUP,general_data$OBESE))
+```
+
+```{r plot1, fig.align='center'}
+ggplot(data = general_data,aes(x=GROUP,y=OBESE,fill=OBESE)) + geom_bar(stat = "identity",color="black",position = position_dodge())+theme_minimal()
 
 ```
 
-From the 34 females, 9 non-obese have PCOS and 8 obese have PCOS. 
 
-
-```{r barplot_subgrupos}
-y <- list(grupo=subgrupos)
-par(mfrow=c(1,1))
-for( i in 1:length(y)){
-  y.t <- y[[i]]
-  barplot(y.t, xlim = c(0, ncol(y.t) + 3), col = 1:3, ylab = "Subjects", 
-        legend.text = T, args.legend = list(x = ncol(y.t) + 3, 
-           y = max(colSums(y.t)), bty = "n"))
-  
-}
-```
-
-Also we can check with a chisq-test if there are differences in the groups.
+**Compute a numerical descriptive table:**. 
+In order to do so, firstly we define a function called `resumen` that computes the sample mean and the sample standard deviation. For visualization purposes, we are only to show those statistics. Those statistics will allow us to identify the ranges of the variables. If we compute more statistics the table will not help due to its huge dimension.
 
 ```{r}
+general_data.variables <- general_data[,3:ncol(general_data)] ## remove samples names and order from the summary
+
+resumen<-function(x){c(round(mean(x),2),round(sd(x),2))} # Function that help us to summarize the data in mean and sd values
+
+
+general_data.sum<-general_data.variables %>%group_by(GROUP,OBESE) %>% 
+  summarise(across(where(is.numeric),resumen),n=n()) # Group the data by variable GROUP and OBESE
+
+d.f<-as.data.frame(t(general_data.sum))[c(nrow(t(general_data.sum)),1:(nrow(t(general_data.sum))-1)),] # transpose the data for visualization purposes and get rid off the N value for same purposes
+d.f_final <- d.f[-c(1:3),] # remove categorical variables.
+nombre_variables<- c("Age (years)",
+                         "BMI",
+                         "Waist circumference (cm)",
+                         "Waist to hip ratio",
+                         "SHBG (nmlol/L)",
+                         "Total testosterone (nmol/L)",
+                         "Free testosterone  (pmol/L)",
+                         "Total estradiol (nmol/L)",
+                         "Free estradiol (pmol/L)",
+                         "Ratio free T/E2",
+                         "hsCRP (nnmol/L)",
+                         "Mean fasting insulin (pmol/L)",
+                         "Mean fasting glucose (mmol/L)",
+                         "Insulin sensitivity index",
+                         "HOMA-IR",
+                         "Triglicerids (mg/dL)",
+                         "Cholesterol (mg/dL)",
+                         "HDL cholesterol (mg/dL)",
+                         "LDL cholesterol (mg/dL)",
+                         "Basal insulin: Glucose day (pmol/L)",
+                         "Basal insulin: Lipid day (pmol/L)" ,
+                         "Basal insulin: Protein day (pmol/L)",
+                         "Basal glucose: Glucose day (mmol/L)",
+                         "Basal glucose: Lipid day (mmol/L)",
+                         "Basal glucose: Protein day (mmol/L)",
+                         "HOMA-IR: Glucose day",
+                         "HOMA-IR: Lipid day",
+                         "HOMA-IR: Protein day",
+                         "Insulin AUC: Glucose day (pmol/L)",
+                         "Insulin AUC: Lipid day (pmol/L)",
+                         "Insulin AUC: Protein day (pmol/L)",
+                         "Glucose AUC: Glucose day (mmol/L)",
+                         "Glucose AUC: Lipid day (mmol/L)",
+                         "Glucose AUC: Protein day (mmol/L)",
+                         "Basal triglicerids: Glucose day (mg/dL)",
+                         "Basal triglicerids: Lipid day (mg/dL)",
+                         "Basal triglicerids: Protein day (mg/dL)",
+                         "Triglicerids AUC: Glucose day (mg/dL)",
+                         "Triglicerids AUC: Lipid day (mg/dL)",
+                         "Triglicerids AUC: Protein day (mg/dL)",
+                         "Basal cholesterol: Glucose day (mg/dL)",
+                         "Basal cholesterol: Lipid day (mg/dL)",
+                         "Basal cholesterol: Protein day (mg/dL)",
+                         "Cholesterol AUC: Glucose day (mg/dL)",
+                         "Cholesterol AUC: Lipid day (mg/dL)",
+                         "Cholesterol AUC: Protein day (mg/dL)",
+                         "Basal HDL: Glucose day (mg/dL)",
+                         "Basal HDL: Lipid day (mg/dL)",
+                         "Basal HDL: Protein day (mg/dL)",
+                         "HDL AUC: Glucose day (mg/dL)",
+                         "HDL AUC: Lipid day (mg/dL)",
+                         "HDL AUC: Protein day (mg/dL)",
+                         "Basal LDL: Glucose day (mg/dL)",
+                         "Basal LDL: Lipid day (mg/dL)",
+                         "Basal LDL: Protein day (mg/dL)",
+                         "LDL AUC: Glucose day (mg/dL)",
+                         "LDL AUC: Lipid day (mg/dL)",
+                         "LDL AUC: Protein day (mg/dL)")
+
+rownames(d.f_final) <-nombre_variables
+N<-as.character(d.f_final[1,])
+colnames(d.f_final) <- rep(c("Mean","SD"),6)
+## ATTENION! Because assining left hand expression is 
+## complicated, just for one table, be careful if we put another data-set
+## For showing the number of subjects by group
+kbl(d.f_final) %>%
+  kable_classic_2() %>%
+    add_header_above(c(" "=1,
+                      "9"= 2,
+                      "8"= 2,
+                      "9"= 2,
+                      "8"= 2,
+                      "10"= 2,
+                      "9"= 2
+ )) %>%
+      add_header_above(c( " "=1,
+                     "No Obese" = 2,
+                     "Obese" =2,
+                     "No Obese" = 2,
+                     "Obese" =2,
+                     "No Obese" = 2,
+                     "Obese" =2 )) %>%
+  add_header_above(c(" "=1,
+                      "Control Females" = 4, 
+                     "PCOS"=4,
+                     "Control Males"=4))
+
+
+```
+**NOTE: Though this a descriptive summary, we provide some test just to be sure the study is well desinged. **
+
+We can check with a chisq-test if there are differences in the groups, i.e differences between obese, non-obese, sex, and patients. In total we have 6 subgroups.
+
+```{r testchisq}
+subgrupos
 chisq.test(subgrupos)
 ```
 There is no relationship between categorical variables.
 
-Regarding the numerical variables, there is an index variable, just to have in order the data. Afterwards, we have the code for the subjects. After the categorical data, there are three variables regarding the body complex and age:
+#### Descriptive statistics: Age and body measures.
+
+Before exploring the biomarkers, firstly we are going to describe age and body  measures, that is:
 
 1. Age
-2. BMI: Body mass Index.
-3. WC: Waist circumference
+2. BMI: Body mass Index. $kg/m^2$
+3. WC: Waist circumference $cm$
 4. WHR: Waist to hip ratio. 
 
-For these variables, we have the following description. The distribution of  the age of the subjects is the following
+#### Age and body measure variables.
 
-```{r}
-nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
-par(mar=c(5.1, 4.1, 1.1, 2.1))
-boxplot(general_data$EDAD, horizontal=TRUE,  outline=FALSE)
-hist(general_data$EDAD,freq = F,main="Histogram of Age",xlab="")
-lines(density(general_data$EDAD))
+In order to speed up the process of plotting, given that we have 58 numerical data, and we need to plot everything, a small script, will store in a list the histogram of all variables as whole, and boxplots by `OBESE` and `GROUP` and their interaction.
+
+```{r plotall}
+## Firstly store all the units for each variable.
+unidades <- c("years",#age
+              "kg/m2",#bmi
+              "cm",#WC
+              " ",#WHR
+              "nmol/L",#shbg
+              "nmol/L",#total testosterone
+              "pmol/L",#free T
+              "pmol/L",#t E2
+              "pmol/L",# F E2
+              " ",#Ratio T/E2
+              "nmol/L",#C
+              "pmol/L",#insulina
+              "mmol/L",# glucosa
+              " ",# ISI
+              " ", #HOMAIR
+              "mg/dL",#TG
+              "mg/dL",#COL
+              "mg/dL",#HDL
+              "mg/dL",#LDL
+              "pmol/L",#insulina
+              "pmol/L",#insulina
+              "pmol/L",#insulina
+              "mmol/L",# glucosa
+              "mmol/L",# glucosa
+              "mmol/L",# glucosa
+              " ",
+              " ",
+              " ",
+              "pmol/L",
+              "pmol/L",
+              "pmol/L",
+              "mmol/L",
+              "mmol/L",
+              "mmol/L",
+              rep("mg/dL",24))
+
+
+variables <- colnames(general_data)[6:ncol(general_data)] # store in variables object all numerical variables
+## Save as object the categorical variables names, in order to fo a for loop
+GROUP="GROUP"
+OBESE="OBESE"
+SEX="SEX"
+
+hist.list<-list() ## initizalize a list of the histogram
+character_vector<-vector(mode="character",length=length(unidades)) # intialize vector of the whole names of variables
+# store in a loop the real manes of the variables.
+for( i in 1:length(unidades)){
+  character_vector[i]<-paste(nombre_variables[i],unidades[i])
+  
+}
+
+## plot all histograms via loop
+for(i in 1:length(variables)){
+  variable <- variables[i] ## name of the variable to plot
+  titulo <- character_vector[i] # title of the varialbe
+  
+  breaks <- pretty(range(general_data[,variable]), # make pretty histogram by appropiate bins
+                   n = nclass.Sturges(general_data[,variable]), min.n = 1)
+  bwidth <- breaks[2]-breaks[1] ## bin width
+
+  ## plot
+  hist.list[[i]]<-ggplot(general_data,aes_string(x=variable))+geom_histogram(aes(y=..density..),
+                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")+xlab(titulo)
+
+
+}
+
+
+bp.interaction <- list() ## intialize boxplot list interaction
+for(i in 1:length(variables)){
+  titulo <- character_vector[i]
+  variable <- variables[i]
+  bp.interaction[[i]]<-ggplot(general_data,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()+ylab(titulo)
+
+}
+
+### intialize boxplot for obese and non obese subjects
+bp.obese <- list()
+for(i in 1:length(variables)){
+  titulo <- character_vector[i]
+  variable <- variables[i]
+  bp.obese[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=OBESE))+geom_boxplot()+ylab(titulo)
+
+}
+### intialize boxplot for females, males and PCOS groups.
+bp.group <- list()
+for(i in 1:length(variables)){
+  titulo <- character_vector[i]
+  variable <- variables[i]
+  bp.group[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=GROUP))+geom_boxplot()+ylab(titulo)
+
+}
+
+
 ```
 
+For those variables, i.e age, WC, WHR and BMi, the distribution of the variables without grouping is the following.
 
-```{r}
-with(general_data,boxplot(EDAD~GROUP))
+
+```{r plothistfirst4}
+do.call(grid.arrange,hist.list[1:4])
 ```
-Just for sanity check, we perform anova analysis on age, just to be sure that the data is equally distributed.
 
-```{r}
+For the age of the subjects, it seems to be a bimodal distribution. It looks like there are two age groups, the ones bellow 25 years and the ones above 25 years. Clearly we have also a bimodal distribution for BMI, and less clearly for Waist Circumference. This is obvius because we are dealing with obese and non-obese subjects. Interestingly, the waist to hip ratio, is not bimodal.
+
+Though for now, we are doing just a descriptive analysis, just for sanity check, we perform anova analysis on age. Though the distribution of age seems to be bimodal, the Shapiro test tells us that the data follows a normal distribution. This maybe due to the law of the large numbers.
+```{r chunksanitycheck}
 shapiro.test(general_data$EDAD)
 summary(with(general_data,aov(EDAD~GROUP)))
 ```
+As expected, there is no difference between groups. This and the chisq-test performed above will be the only test on the descriptive analysis. 
+
+Regarding the boxplots, we have the following.
 
 
-Regarding body complex.
 
+```{r boxplots}
 
-```{r}
-nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
-par(mar=c(5.1, 4.1, 1.1, 2.1))
-boxplot(general_data$BMI, horizontal=TRUE,  outline=FALSE)
-hist(general_data$BMI,freq = F,main="Histogram of BMI",xlab="")
-lines(density(general_data$BMI))
-```
-Due to the fact that we have 2 groups, obese and non-obese, it is obviusly that the distribution is bimodal. 
-
-Let's inspect by cSEX.
-
-```{r}
-with(general_data,shapiro.test(BMI))
-
-with(general_data,boxplot(BMI~GROUP))
-with(general_data,kruskal.test(BMI~GROUP))
-```
-We do not observe differences between control groups and PCOS.
-
-```{r}
-with(general_data,boxplot(BMI~SEX))
-with(general_data,wilcox.test(BMI~SEX))
+do.call(grid.arrange,c(bp.interaction[1:4]))
 ```
 
 
-Also we do not observe differences between SEX and BMI, Now let's inspect by controls and PCOS.
-
-```{r}
-with(general_data,boxplot(BMI~GROUP))
-with(general_data,kruskal.test(BMI~GROUP))
+```{r chunk4}
+four_plots(general_data,"WC")
 ```
 
 
-
-We also do not observe differences. 
-
-```{r}
-nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
-par(mar=c(5.1, 4.1, 1.1, 2.1))
-boxplot(general_data$WC, horizontal=TRUE,  outline=FALSE)
-hist(general_data$WC,freq = F,main="Histogram of Waist Circunference",xlab="")
-lines(density(general_data$WC))
+```{r chunk5}
+four_plots(general_data,"WHR")
 ```
 
-Let's inspect Waist Circunferece by GROUP.
-```{r}
-with(general_data,shapiro.test(WC))
+We have just plotted the main distribution of the variable we are studying, the interaction we are interested, which is the main group, and which of these subjects are obese or not. Clearly in the descriptibe plots, there is a difference between body measures and there is not differences between age. Furthermore, is obvius that for a good starting point there are not differences between groups.
 
-with(general_data,boxplot(WC~GROUP))
-with(general_data,kruskal.test(WC~GROUP))
+### Description of clinical biomarkers.
+
+The SHBG SHBG is a protein made by your liver. It binds tightly to 3 sex hormones found in both men and women. These hormones are estrogen, dihydrotestosterone (DHT), and testosterone. SHBG carries these 3 hormones throughout your blood. Although SHBG binds 3 hormones, the hormone that's critical in this test is testosterone. SHBG controls the amount of testosterone that your body tissues can use. Too little testosterone in men and too much testosterone in women can cause problems. The level of SHBG in your blood changes because of factors such as sex and age. It can also change because of obesity, liver disease, and hyperthyroidism. 
+
+Androgen deficiency. Low levels of the hormone androgen can cause general weakness and sexual problems in men. In women, androgen may affect thinking and bone strength. It may also prevent the ovaries from working the way they should.  
+
+Hypogonadism. This condition happens mostly in men. It's found in men with low testosterone and low sperm production.
+
+From the data, we observe that is progressively lower from women PCOS and men. And the concentration is higher in normal subjects than obese. 
+
+CRP is used mainly as an inflammation marker. Normal levels increase with aging. Recent research suggests that patients with elevated basal levels of CRP are at an increased risk of diabetes,and cardiovascular diseases. hs-CRP levels may not per se be associated with PCOS, rather can be related to fat mass in this subset of subjects.
+
+High levels of HSCRP hyperinsulinemia. Fasting plasma insulin concentration. Independent predictor of HSCRP.
+
+HOMAIR and ISI index of insulin resistance. 
+
+First of all let's create histograms with their respective density, and boxplot for the variables GROUP, OBESE and the interaction. Just to make the thinks clear, firstly I want to give an overall overview of the variables. The general distribution, without grouping and then by groups. In order to observe if there is a pattern between controls and PCOS subjects. Before going into the three loads of macronutrients, let's consider the variables of the sex steroids, the high C-reactive protein, mean basal levels of insulin and glucose, the Insulin Sensitivity Index. 
+
+```{r chunk6}
+variables <- colnames(general_data)[6:ncol(general_data)]
+  GROUP="GROUP"
+  OBESE="OBESE"
+  SEX="SEX"
+
+
+  variables <- colnames(general_data)[6:ncol(general_data)]
+
+hist.list<-list()
+for(i in 1:length(variables)){
+  variable <- variables[i]
+  breaks <- pretty(range(general_data[,variable]),
+                   n = nclass.Sturges(general_data[,variable]), min.n = 1)
+  bwidth <- breaks[2]-breaks[1]
+
+  
+  hist.list[[i]]<-ggplot(general_data,aes_string(x=variable))+geom_histogram(aes(y=..density..),
+                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")
+
+
+}
+
+
+
+
+bp.interaction <- list()
+for(i in 1:length(variables)){
+  variable <- variables[i]
+  bp.interaction[[i]]<-ggplot(general_data,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()
+
+}
+
+bp.obese <- list()
+for(i in 1:length(variables)){
+  variable <- variables[i]
+  bp.obese[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=OBESE))+geom_boxplot()
+
+}
+
+bp.group <- list()
+for(i in 1:length(variables)){
+  variable <- variables[i]
+  bp.group[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=GROUP))+geom_boxplot()
+
+}
+
+
+```
+
+At first sight, we can observe that only the mean basal glucose levels follows a normal distribution. The other variables, are right skewed. Maybe because the distribution differs between groups. But the distribution of the variables also suggest a logarithmic distribution.
+```{r chunk7}
+do.call(grid.arrange,hist.list[5:13])
 ```
 
 
-Though we observe a slight difference in men, there is not statistical evidence that shows the contraire. Now let's inspect by Obese.
-
-```{r}
-with(general_data,boxplot(WC~OBESE))
-with(general_data,wilcox.test(WC~OBESE))
-```
-
-
-Obviusly, there is a statistical difference between obese and non-obese subjects. 
-
+Secondly, let's inspect the variables for possible patterns between obese subjects.
 
 
 ```{r}
-nf <- layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,3))
-par(mar=c(5.1, 4.1, 1.1, 2.1))
-boxplot(general_data$WHR, horizontal=TRUE,  outline=FALSE)
-hist(general_data$WHR,freq = F,main="Histogram of WHR",xlab="")
-lines(density(general_data$WHR))
-with(general_data,shapiro.test(WHR))
-with(general_data,bartlett.test(WHR~GROUP))
-with(general_data,bartlett.test(WHR~OBESE))
+do.call(grid.arrange,bp.interaction[5:10])
+do.call(grid.arrange,bp.obese[5:10])
+do.call(grid.arrange,bp.group[5:10])
 
-par(mfrow=c(1,3))
-with(general_data,boxplot(WHR~GROUP))
-with(general_data,boxplot(WHR~OBESE))
-with(general_data,boxplot(WHR~OBESE+GROUP))
+
+lm.TT<-ggplot(general_data,aes(SHBG, TOTAL_TEST))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Total Testosterone")
+
+lm.TT+facet_wrap(.~ OBESE+GROUP)
+lm.FT<-ggplot(general_data,aes(SHBG, FREE_TEST))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Free Testosterone")
+
+lm.FT+facet_wrap(.~ OBESE+GROUP)
+# 
+lm.TE2<-ggplot(general_data,aes(SHBG, Total_ESTR))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Total Estradiol")
+
+lm.TE2+facet_wrap(.~ OBESE+GROUP)
+
+lm.freeE2<-ggplot(general_data,aes(SHBG, Free_ESTRA))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Free Etradiol")
+
+lm.freeE2+facet_wrap(.~ OBESE+GROUP)
+
+lm.ratio<-ggplot(general_data,aes(SHBG, RatioFreeTE2))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Ratio Free Testosterone-E2")
+
+lm.ratio+facet_wrap(.~ OBESE+GROUP)
 
 ```
+
+The SHBG is a protein that binds with sex hormones. This means that when SHBG increases, the free sex steroids diminishes, but the total sex steroids, augments, being the result of the sum.  Women sex steroid E2 and men Testosterone. Therefore for health subjects and non-obese we expect to have a higher concentration of E2 in women and lower in men. The contrary happens with testosterone. On obese subjects, the SHBG, have lower levels than non-obese. In obese women, tent to have slightly levels of total testosterone, but it is barley appreciable, than non-obese women. Obese men, have lower levels of total tesosterone than non-obese men. Free testosterone, has the same behavior in women. But in men, free testosterone, is higher in obese than non-obese. PCOS women, have similar values of SHBG than control women and higher concentration of testosterone levels. 
+
+The SHBG is higher in women independently if they have PCOS or not. Regarding E2, the concentration is higher in obese subjects than non-obese subjects. And higher in women irrespective if they have PCOS than men. E2 have lower concentration in PCOS women than control women. 
+
+The ratio of both free sex steroids is higher in non-obese subjects, and higher in men. But it is not distinguishable between obese and non-obese PCOS women
+```{r}
+do.call(grid.arrange,bp.interaction[11:16])
+do.call(grid.arrange,bp.obese[11:16])
+do.call(grid.arrange,bp.group[11:16])
+
+lm.glu<-ggplot(general_data,aes( GlucosaBasal_mean,InsulinaBasal_mean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
+
+lm.glu+facet_wrap(.~ OBESE+GROUP)
+
+
+
+
+lm.isi<-ggplot(general_data,aes(InsulinaBasal_mean, SOG_ISI))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
+
+lm.isi+facet_wrap(.~ OBESE+GROUP)
+
+lm.homair<-ggplot(general_data,aes(InsulinaBasal_mean, HOMAIRmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
+
+lm.homair+facet_wrap(.~ OBESE+GROUP)
+
+do.call(grid.arrange,bp.interaction[17:19])
+do.call(grid.arrange,bp.obese[17:19])
+do.call(grid.arrange,bp.group[17:19])
+
+```
+
+
+Regarding the mean values of basal insulin, there is higher concentration of this protein in obese subjects than non-obese. Furthermore, there are also high basal levels of glucose on obese subjects in comparison with non-obese. However, at first sight this difference in male is not observable. Regarding the correlation, in healthy subjects, it is known that there is a negative correlation between insulin and glucose, but o non-obese PCOS females and obese males this correlation is positive. 
+
+The high-sensitivity C-reactive protein (hs-CRP) test is a blood test that finds lower levels of C-reactive protein (CRP). This protein measures general levels of inflammation in your body. The hs-CRP can be used to find the risk for heart disease and stroke in people who don't already have heart disease.
+
+The hs-CRP test is different than the standard CRP test. The standard test measures high levels of the protein to find different diseases that cause inflammation. The hs-CRP test measures low levels and focuses on the risk of heart disease and stroke. 
+
+hsCRP, is higher in obese women in general but there is no difference in men. Menwile the ISI is higher in non-obese subjects, the HOMA-IR model gives high values  for obese subjects in general as well as triglicerids, LDL and Cholesterol. The HDL con the contrary show lower levels in obese subjects and higher levels in non-obese subjects. 
+
+
+```{r}
+bp.3.vars<-function(vars,x_lab,y_lab){
+  
+  datos <- cbind(general_data[,c("GROUP","OBESE")],general_data[,vars])
+  df.melt<-melt(datos,id.vars=c("GROUP","OBESE"))
+    # print(head(df.melt))
+
+
+  p0<-ggplot(df.melt,aes(y=value,x=variable))+geom_boxplot()+xlab(x_lab)+ylab(y_lab)
+  p1<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)
+  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=OBESE))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)
+  
+  lista<-list(todo=p0,grupo=p1,obesos=p2)
+  return(lista)
+  
+}
+
+
+bp.1.vars<-function(vars,x_lab,y_lab){
+  
+  datos <- cbind(general_data[,c("GROUP","OBESE")],general_data[,vars])
+  df.melt<-melt(datos,id.vars=c("GROUP","OBESE"))
+    # print(head(df.melt))
+
+
+  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)+facet_grid(~OBESE)
+  
+  
+  return(p2)
+  
+}
+
+
+
+
+do.call(grid.arrange,bp.3.vars(c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),x_lab = "",y_lab="pmol/L"));
+bp.1.vars(vars = c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),"",y_lab="pmol/L")
+do.call(grid.arrange,bp.3.vars(c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),x_lab = "",y_lab="mmol/L"));
+bp.1.vars(vars = c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),"",y_lab="pmol/L")
+do.call(grid.arrange,bp.3.vars(c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),x_lab = "",y_lab="mmol/L"));
+bp.1.vars(vars = c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),"",y_lab="pmol/L")
+do.call(grid.arrange,bp.3.vars(c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),x_lab = "",y_lab="mmol/L"));
+bp.1.vars(vars = c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),"",y_lab="pmol/L")
+do.call(grid.arrange,bp.3.vars(c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),x_lab = "",y_lab="mmol/L"));
+bp.1.vars(vars = c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),"",y_lab="pmol/L")
+do.call(grid.arrange,bp.3.vars(c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),x_lab = "",y_lab="mmol/L"));
+bp.1.vars(vars = c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),"",y_lab="pmol/L")
+
+
+```
+
+The mean values of insulin are lower in non-obese men than non-obese women, however, these values increase in obese subjects, specially in obese PCOS. But the basal level on the lipid load day, the obese PCOS patients shows the highest values.
+
+The mean values of  basal glucose are higher in obese subjects. Across the three days of the study, similar values hold as expected. Again being higher in obese subjects and lower levels in PCOS patients and higher in men.
+
+Regarding triglicerdis mean basal levels, de levels are lower in control women, followed by PCOS and higher in men. In general, these values are higher in obese subjects. These relationship holds across the three days of the study. 
+
+
+The mean value of cholesterol levels are similar across subjects, being higher in obese subjects. If we observe these values by day, on non-obese females theese values are higher than PCOS and men in non-obese subjects. But on obese subjects these values are higher in men and PCOS women.
+
+The mean values of HDL cholesterol are higher in women as a whole in women than men. Being higher in non-obese subjects. With similar values in control women and PCOS women. Diring the study the relationship holds. 
+
+The mean values of LDL cholesterol, are similar across subjects. However if we take a close look at non-obese subjects, these values are higher in obese subjects. Between non-obese subjects the higher values are for healthy women. During the three days that took the study, in obese subjects, higher values have PCOS and men.
+
+
+```{r}
+do.call(grid.arrange,bp.3.vars(c("SOG_HOMAIR","SOL_HOMAIR","SOP_HOMAIR"),x_lab = "",y_lab=""))
+bp.1.vars(vars = c("SOG_HOMAIR","SOL_HOMAIR","SOP_HOMAIR"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),x_lab = "",y_lab="pmol/L"))
+bp.1.vars(vars = c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),x_lab = "",y_lab="mmol/L"))
+bp.1.vars(vars = c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),x_lab = "",y_lab="mmol/L"))
+bp.1.vars(vars = c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),x_lab = "",y_lab="mmol/L"))
+bp.1.vars(vars = c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),x_lab = "",y_lab="mmol/L"))
+bp.1.vars(vars = c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),"",y_lab="pmol/L")
+
+do.call(grid.arrange,bp.3.vars(c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),x_lab = "",y_lab="mmol/L"))
+bp.1.vars(vars = c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),"",y_lab="pmol/L")
+
+
+```
+
+HOMA, the homeostiatic model assessment, is mathod used to quantify insulin resiance and beta-cell function. The model describes glucose regulation as feedback loop. It is calculated as $HOMA-IR = \frac{Glucose \times Insulin}{22.5}$ Both parameters are taken during fasting. Levels for this model remain almost with no variation. Being these values higher in obese subjects.
+
+Postpradrial insulin levels are similar across all subjects being the obese ones that have higher values on the first day of the study that belongs to the glucose load. The levels on the protein load day are less than the glucose load day but higher than the lipid load day.
+
+Postpradrial glucose levels are higher in men and PCOS women. Furthemore this levels are higher in obese subjects. The days not belonging to the glucose load are similar.
+
+Postpradrial triglicerids levels are similar across all subjects being higher the lipid load day
+
+Postpradrial cholesterol levels are decreases progresivly across the days. Being slighly higher on obese subjects. HDL and LDL levels show similar behavior.
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 ```{r}
-with(general_data,kruskal.test(WHR~GROUP+OBESE+OBESE*GROUP))
+four_plots(general_data,"TOTAL_TEST")
 ```
+
+Total testosterone, by far in more concentration in men than in women. At simple sight, there is no difference between obese and non obese subjects. But is higher in PCOS women than control women. Control women non obese is lower the concentration tha obese. While in PCOS women, this distribution sweeps, but in higher concetnrations
+```{r}
+four_plots(general_data,"FREE_TEST")
+```
+
+Free testosterone, follows the same distribution, in the sense that men have the higher concentration, followed by PCOS women and control women. And in general obese subjects have more Free testosterone than non.obese. 
+
+```{r}
+four_plots(general_data,"Total_ESTR")
+```
+Total estradiol, obviously is higher in control women, followed by PCOS and by men. In general, is higher in obese subjects.
+
+```{r}
+four_plots(general_data,"Free_ESTRA")
+```
+Free estradiol, folows the same distribution than total estradiol
+```{r}
+four_plots(general_data,"RatioFreeTE2")
+```
+
+This ratio, follows the same distribution than estriadiol.
+
+#### High Sensitivty C-reactive protein
+
+```{r}
+four_plots(general_data,"hsCRP")
+```
+Regarding hsCRP, we observe certain outliers. In general, hsCRP is higher in obese subjects than non-obese. However, this relatioship is higher in non-obese males tan obese men. And PCOS obese women, the concentration is higher
+
+#### Basal Insulin mean value
+```{r}
+four_plots(general_data,"InsulinaBasal_mean")
+```
+Though skweed, the data seems to follow a normal distribution. The mean basal levels of insulin are higher in obese subjects than non-obese. The mean levels of basal insulin are higher in women than in men. But less higher in PCOS women than control. But this levels increase in obese PCOS women.
+
+#### Glucose mean basal levels
+```{r}
+four_plots(general_data,"GlucosaBasal_mean")
+```
+Overall, this relationship follows a normal distribution withno outliers. These levels of glucose are higher in obese subjects. And higher in men. But obese control women have the greatest values. 
+
+
+#### Insulin Sensitivy Index when challenge glucose. 
 
 
 ```{r}
-with(general_data,pairwise.wilcox.test(WHR,GROUP,method="bonferroni"))
+four_plots(general_data,"SOG_ISI")
 ```
+Regargin the challenge glucose day for measuring the insulin sensitivy indes, the vallues follow a skweed distribution but mainly because one sample, a non-obese PCOS women. In general these values are higher in non-obese subjects.
+
+#### HOMAIR mean
+```{r}
+four_plots(general_data,"HOMAIRmean")
+```
+
+The model for the insulin resistance, follows a normal distribution. Beeing this homeostasis model, higher in obese subjects than non-obese. And in PCOS obese subjects this model increases at its maximum.
+
+#### TG mean
+```{r}
+four_plots(general_data,"TGmean")
+```
+
+Triglicerids conectration at basal leves between the 3 days are higher between obese subjects and PCOS women than control.
+
+#### Mean colesterol
+```{r}
+four_plots(general_data,"COLmean")
+```
+Basal levels of colesterol are lower in control subjects than obese subjects. And these values are higher in female than males. But this association changes between obese subjects.
+
+
+#### HDL mean
 
 
 ```{r}
-with(general_data,wilcox.test(WHR~OBESE))
+four_plots(general_data,"HDLmean")
 ```
 
-Regarding Wist to Hip Ratio, there is a significance differece, obviusly between obese subjects.
+HDL has higher concetration in non-obese subjects than obese subjects. And higher in women than in men. PCOS women have higher values.
 
 
-We have 53 samples and 61 variables. The first two variables are the index of the patients, and the second column is the patient identification. Because the first column is an index we can get rid off.
+#### LDL mean
+```{r}
+four_plots(general_data,"LDLmean")
+```
+
+LDL particles, have higher conectration in obese subjects than non-obese.  And similar values with women with PCOS and men.
+
+### General overview.
+
+
+
+
+
+
+
+
+
+### Correlationships.
+Let's do some correlation plots/scatter plots.
+
+
+```{r}
+
+```
+
+As we observe earlier, the total testosterone, is much higher in men. The correlation between SHBG in men is higher in obese men than non-obese. But this values are somewhat similar between control women both obese and non-obese. But when it comes to PCOS women, this relationship is lower, beeing lowest in obese PCOS subjects.
+
+On the other side, this relatioship is negatvie for free testosterone. Between men, this relationship is lower in non-obeese, beeing the lowest value. In general, on obese subjects this relationship is weaker than non-obese. Between non-obese female, PCOS and men, this negative relationship is progesvly weaker. And This relatioship is even weaeker between obese subjects.
+```{r}
+
+```
+Regarding total estradiol, the correlation is positive for control women, and negative for men and PCOS women. Beeing this relationship the most negative in control men. Between PCOS women, the relatipship almost does not exist in PCOS-non obese women.
+
+```{r}
+
+```
+
+Regarding free estradiol, in control women is interesingly that obese women is positive, but in non-obese women control is negative. This relatipnship betweehn SHBG and free estradiol the most negative value is between non-obese male. The following value is between obese PCOS women.
+```{r}
+
+
+```
+
+The ratio beteen FreeTestosterone and Estradiol have it higher in obese  males followed by non obese. This correlatioship is positive in men and obese womenwith PCOS. Furthermoe this correlationship is almost inexisten though negative in control non-obese women.
+```{r}
+
+```
+
+
 
 In order to understand the data, we have all basal levels, but there are some in which they have only 1 day and other the mean of the three days. 
 
@@ -343,46 +850,13 @@ At first sight, we have 3 factor variables, sex, group, and obese. Furthermore w
 
 
 ```{r}
-general_data.variables <- general_data[,3:ncol(general_data)]
-
-resumen<-function(x){c(min(x),quantile(x,0.25),quantile(x,0.5),mean(x),quantile(x,0.75),max(x),sd(x))}
-
-general_data.sum<-general_data.variables %>%group_by(GROUP,OBESE) %>%
-  summarise(across(where(is.numeric),resumen),n=n())
-
 
 ```
 
 
-```{r}
-with(general_data.variables,table(GROUP,OBESE))
-```
 
 
-```{r}
-histdens_clinical<-function(datos){
-  
-  p<-4:ncol(datos)
-  gr<-(ceiling(sqrt(length(p))))
-  par(mfrow=c(4,4))
-  for ( i in p){
-    
-    hist(datos[,i],freq=F,main = "",xlab =colnames(datos)[i],ylab = "Density",col="lightblue" )
-    lines(density(datos[,i]),col="navy")
-    
-    
-  }
-
-}
-
-both<-union(levels(general_data.variables$GROUP),levels(general_data.variables$GROUP))
-with(general_data.variables,boxplot(EDAD~OBESE:GROUP))
-```
 
 
-```{r}
-histdens_clinical(general_data.variables)
-
-```
 
 

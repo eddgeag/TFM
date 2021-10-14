@@ -5,12 +5,9 @@ author: "Edmond Geraud"
 subtitle: '`r params$subtitulo`'
 date: '`r format(Sys.Date(),"%e de %B, %Y")`' 
 output:
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_float: true
-    theme: united
-    highlight: tango
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
 header-includes:
   - \usepackage[english]{babel}
 params:
@@ -38,7 +35,7 @@ In order to have a reproducible research, the following chunk, install the packa
 
 ```{r libraries}
 
-list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2")
+list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2","ggcorrplot")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])] ## check for packages not installed 
 if(length(new.packages)) install.packages(new.packages) ## install packages if necessary
 res<-unlist(lapply(list.of.packages, require,character.only = T)) ## load packages needed for the session
@@ -50,6 +47,81 @@ if(any(res==F)){
 
 
 ## Description of the data
+
+
+The meaning of the 61 variables are:
+
+| Variable 	| Description 	|
+|:---:	|:---:	|
+| Orden 	| Order of the subjects 	|
+| Paciente 	| Women contol (M),PCOS women (P),Male (V), d (Not obese), O (Obese), GLP (challenge macronutrients: glucose, lipids, proteins) 	|
+|  	<br>SEX 	| 0 Women, 2 Male 	|
+|  	<br>GROUP 	| 0 Women Control, 1 PCOS, 2 Male 	|
+|  	<br>OBESE 	| 0 Not obese, 1 Obese 	|
+| EDAD 	| Age 	|
+| BMI 	| Body Mass Index 	|
+| WC 	| Waist circumference 	|
+| WHR 	| Waist to hip ratio 	|
+| SHBG 	| Sex hormone-binding protein 	|
+| TOTAL_TEST 	| Total testosterone (T) 	|
+| FREE_TEST 	| Free testosterone 	|
+| Total_ESTR 	| Total estradiol (E2) 	|
+| Free_ESTRA 	| Free estradiol 	|
+| RatioFreeTE2 	| Free T/FreeE2 ratio 	|
+| hsCRP 	| High sensitivity C-reactive protein 	|
+| InsulinaBasal_mean 	| Mean basal insluin 	|
+| GlucosaBasal_mean 	| Mean basal glucose 	|
+| SOG_ISI 	| Insulin sensitivity index (it is only calculated on the challenge oralglucose day) 	|
+| HOMAIRmean 	| Homeostasis model assessment of insulin resistance (mean of the three days) 	|
+| TGmean 	| Triglicerids (Basal. mean of the three challenges) 	|
+| COLmean 	| Total Cholesterol (Basal. mean of the three challenges) 	|
+| HDLmean 	| HDL Cholesterol (Basal. mean of the three challenges) 	|
+| LDLmean 	| LDL Cholesterol (Basal. mean of the three challenges) 	|
+| SOG_INS_B 	| Basal insulin when challenge oral glucose day 	|
+| SOL_INS_B 	| Basal insulin when challenge oral lipid day 	|
+| SOP_INS_B 	| Basal insulin when challenge oral protein day 	|
+| SOG_GLC_B 	| Basal glucose when challenge oral glucose day 	|
+| SOL_GLC_B 	| Basal glucose when challenge oral lipid day 	|
+| SOP_GLC_B 	| Basal glucose when challenge oral protein day 	|
+| SOG_HOMAIR 	| HOMAIR Glucose Oral Challenge day 	|
+| SOL_HOMAIR 	| HOMAIR Lipid Oral Challenge day 	|
+| SOP_HOMAIR 	| HOMAIR Protein Oral Challenge day 	|
+| SOG_INS_AUC 	| Area Under the Curve of the insulin on Glucose Oral Challenge 	|
+| SOL_INS_AUC 	| Area Under the Curve of the insulin on Lipids Oral Challenge 	|
+| SOP_INS_AUC 	| Area Under the Curve of the insulin on Proteins Oral Challenge 	|
+| SOG_GLU_AUC 	| Area Under the Curve of the Glucose on Glucose Oral Challenge 	|
+| SOL_GLU_AUC 	| Area Under the Curve of the Glucose on Lipids Oral Challenge 	|
+| SOP_GLU_AUC 	| Area Under the Curve of the Glucose on ProteinsOral Challenge 	|
+| SOG_TG_0 	| Triglicerids at basal level on Glucose Oral Challenge 	|
+| SOL_TG_0 	| Triglicerids at basal level on Lipid Oral Challenge 	|
+| SOP_TG_0 	| Triglicerids at basal level on Protein Oral Challenge 	|
+| SOGAUCTG 	| Triglicerids Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCTG 	| Triglicerids Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCTG 	| Triglicerids Area Under the Curve Oral Proteins Challenge 	|
+| SOG_COL_0 	| Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_COL_0 	| Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_COL_0 	| Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCCOL 	| Cholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCCOL 	| Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCCOL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+| SOG_HDL_0 	| HDL Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_HDL_0 	| HDL Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_HDL_0 	| HDL Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCHDL 	| HDLCholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+| SOG_LDL_0 	| LDL Cholesterol at basal level on Glucose Oral Challenge 	|
+| SOL_LDL_0 	| LDL Cholesterol basal level on Lipid Oral Challenge 	|
+| SOP_LDL_0 	| LDL Cholesterol at basal level on Protein Oral Challenge 	|
+| SOGAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Glucose Challenge 	|
+| SOLAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
+| SOPAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
+
+
+In general SOG means Glucose Oral Challenge, SOL: Lipid Oral challenge, and SOP Protein Oral challenge.
+
+It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absortion of lipids by the intestine is slower. 
+
 
 
 
@@ -214,6 +286,9 @@ chisq.test(subgrupos)
 ```
 There is no relationship between categorical variables.
 
+
+
+
 #### Descriptive statistics: Age and body measures.
 
 Before exploring the biomarkers, firstly we are going to describe age and body  measures, that is:
@@ -229,41 +304,41 @@ In order to speed up the process of plotting, given that we have 58 numerical da
 
 ```{r plotall}
 ## Firstly store all the units for each variable.
-unidades <- c("years",#age
-              "kg/m2",#bmi
-              "cm",#WC
-              " ",#WHR
-              "nmol/L",#shbg
-              "nmol/L",#total testosterone
-              "pmol/L",#free T
-              "pmol/L",#t E2
-              "pmol/L",# F E2
-              " ",#Ratio T/E2
-              "nmol/L",#C
-              "pmol/L",#insulina
-              "mmol/L",# glucosa
-              " ",# ISI
-              " ", #HOMAIR
-              "mg/dL",#TG
-              "mg/dL",#COL
-              "mg/dL",#HDL
-              "mg/dL",#LDL
-              "pmol/L",#insulina
-              "pmol/L",#insulina
-              "pmol/L",#insulina
-              "mmol/L",# glucosa
-              "mmol/L",# glucosa
-              "mmol/L",# glucosa
-              " ",
-              " ",
-              " ",
-              "pmol/L",
-              "pmol/L",
-              "pmol/L",
-              "mmol/L",
-              "mmol/L",
-              "mmol/L",
-              rep("mg/dL",24))
+# unidades <- c("years",#age
+#               "kg/m2",#bmi
+#               "cm",#WC
+#               " ",#WHR
+#               "nmol/L",#shbg
+#               "nmol/L",#total testosterone
+#               "pmol/L",#free T
+#               "pmol/L",#t E2
+#               "pmol/L",# F E2
+#               " ",#Ratio T/E2
+#               "nmol/L",#C
+#               "pmol/L",#insulina
+#               "mmol/L",# glucosa
+#               " ",# ISI
+#               " ", #HOMAIR
+#               "mg/dL",#TG
+#               "mg/dL",#COL
+#               "mg/dL",#HDL
+#               "mg/dL",#LDL
+#               "pmol/L",#insulina
+#               "pmol/L",#insulina
+#               "pmol/L",#insulina
+#               "mmol/L",# glucosa
+#               "mmol/L",# glucosa
+#               "mmol/L",# glucosa
+#               " ",
+#               " ",
+#               " ",
+#               "pmol/L",
+#               "pmol/L",
+#               "pmol/L",
+#               "mmol/L",
+#               "mmol/L",
+#               "mmol/L",
+#               rep("mg/dL",24))
 
 
 variables <- colnames(general_data)[6:ncol(general_data)] # store in variables object all numerical variables
@@ -273,25 +348,18 @@ OBESE="OBESE"
 SEX="SEX"
 
 hist.list<-list() ## initizalize a list of the histogram
-character_vector<-vector(mode="character",length=length(unidades)) # intialize vector of the whole names of variables
-# store in a loop the real manes of the variables.
-for( i in 1:length(unidades)){
-  character_vector[i]<-paste(nombre_variables[i],unidades[i])
-  
-}
-
 ## plot all histograms via loop
 for(i in 1:length(variables)){
   variable <- variables[i] ## name of the variable to plot
-  titulo <- character_vector[i] # title of the varialbe
+  titulo <- nombre_variables[i] # title of the varialbe
   
-  breaks <- pretty(range(general_data[,variable]), # make pretty histogram by appropiate bins
-                   n = nclass.Sturges(general_data[,variable]), min.n = 1)
+  breaks <- pretty(range(general_data[,variable]), 
+                   n = nclass.Sturges(general_data[,variable]), min.n = 1)# make pretty histogram by appropiate bins
   bwidth <- breaks[2]-breaks[1] ## bin width
 
   ## plot
   hist.list[[i]]<-ggplot(general_data,aes_string(x=variable))+geom_histogram(aes(y=..density..),
-                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")+xlab(titulo)
+                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")+xlab(titulo)+ylab("")
 
 
 }
@@ -299,7 +367,7 @@ for(i in 1:length(variables)){
 
 bp.interaction <- list() ## intialize boxplot list interaction
 for(i in 1:length(variables)){
-  titulo <- character_vector[i]
+  titulo <- nombre_variables[i]
   variable <- variables[i]
   bp.interaction[[i]]<-ggplot(general_data,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()+ylab(titulo)
 
@@ -308,7 +376,7 @@ for(i in 1:length(variables)){
 ### intialize boxplot for obese and non obese subjects
 bp.obese <- list()
 for(i in 1:length(variables)){
-  titulo <- character_vector[i]
+  titulo <- nombre_variables[i]
   variable <- variables[i]
   bp.obese[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=OBESE))+geom_boxplot()+ylab(titulo)
 
@@ -316,7 +384,7 @@ for(i in 1:length(variables)){
 ### intialize boxplot for females, males and PCOS groups.
 bp.group <- list()
 for(i in 1:length(variables)){
-  titulo <- character_vector[i]
+  titulo <- nombre_variables[i]
   variable <- variables[i]
   bp.group[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=GROUP))+geom_boxplot()+ylab(titulo)
 
@@ -341,105 +409,32 @@ summary(with(general_data,aov(EDAD~GROUP)))
 ```
 As expected, there is no difference between groups. This and the chisq-test performed above will be the only test on the descriptive analysis. 
 
-Regarding the boxplots, we have the following.
+Regarding the boxplots of Age, BMI, WC, and WHR, we do not observe differences between groups in age. For the rest of variables of body shape, clearly there is a difference, and it is obvious regarding the study design.
 
-
-
-```{r boxplots}
+```{r boxplotsInteraction1}
 
 do.call(grid.arrange,c(bp.interaction[1:4]))
 ```
 
 
-```{r chunk4}
-four_plots(general_data,"WC")
-```
 
+### Description of biohemical biomarkers.
 
-```{r chunk5}
-four_plots(general_data,"WHR")
-```
+#### SHBG, Testosterone, Estradiol and their relationship with age, BMI, WC and WHR.
+*Firstly let's describe some variables and how do they act in the body*
 
-We have just plotted the main distribution of the variable we are studying, the interaction we are interested, which is the main group, and which of these subjects are obese or not. Clearly in the descriptibe plots, there is a difference between body measures and there is not differences between age. Furthermore, is obvius that for a good starting point there are not differences between groups.
+The Sex Hormone Binding Globulin (`SHBG`) is a protein made by the liver. It binds tightly to **androgens** and **estradiol**.  SHBG controls the amount of testosterone that your body tissues can use. The level of SHBG in the blood changes because of factors such as **sex and age and obesity** among other factors. Androgen deficiency. Low levels of the hormone androgen can cause general weakness and sexual problems in men. In women, androgen may affect thinking and bone strength.*It may also prevent the ovaries from working the way they should*.  
 
-### Description of clinical biomarkers.
-
-The SHBG SHBG is a protein made by your liver. It binds tightly to 3 sex hormones found in both men and women. These hormones are estrogen, dihydrotestosterone (DHT), and testosterone. SHBG carries these 3 hormones throughout your blood. Although SHBG binds 3 hormones, the hormone that's critical in this test is testosterone. SHBG controls the amount of testosterone that your body tissues can use. Too little testosterone in men and too much testosterone in women can cause problems. The level of SHBG in your blood changes because of factors such as sex and age. It can also change because of obesity, liver disease, and hyperthyroidism. 
-
-Androgen deficiency. Low levels of the hormone androgen can cause general weakness and sexual problems in men. In women, androgen may affect thinking and bone strength. It may also prevent the ovaries from working the way they should.  
-
-Hypogonadism. This condition happens mostly in men. It's found in men with low testosterone and low sperm production.
-
-From the data, we observe that is progressively lower from women PCOS and men. And the concentration is higher in normal subjects than obese. 
-
-CRP is used mainly as an inflammation marker. Normal levels increase with aging. Recent research suggests that patients with elevated basal levels of CRP are at an increased risk of diabetes,and cardiovascular diseases. hs-CRP levels may not per se be associated with PCOS, rather can be related to fat mass in this subset of subjects.
-
-High levels of HSCRP hyperinsulinemia. Fasting plasma insulin concentration. Independent predictor of HSCRP.
-
-HOMAIR and ISI index of insulin resistance. 
-
-First of all let's create histograms with their respective density, and boxplot for the variables GROUP, OBESE and the interaction. Just to make the thinks clear, firstly I want to give an overall overview of the variables. The general distribution, without grouping and then by groups. In order to observe if there is a pattern between controls and PCOS subjects. Before going into the three loads of macronutrients, let's consider the variables of the sex steroids, the high C-reactive protein, mean basal levels of insulin and glucose, the Insulin Sensitivity Index. 
-
-```{r chunk6}
-variables <- colnames(general_data)[6:ncol(general_data)]
-  GROUP="GROUP"
-  OBESE="OBESE"
-  SEX="SEX"
-
-
-  variables <- colnames(general_data)[6:ncol(general_data)]
-
-hist.list<-list()
-for(i in 1:length(variables)){
-  variable <- variables[i]
-  breaks <- pretty(range(general_data[,variable]),
-                   n = nclass.Sturges(general_data[,variable]), min.n = 1)
-  bwidth <- breaks[2]-breaks[1]
-
-  
-  hist.list[[i]]<-ggplot(general_data,aes_string(x=variable))+geom_histogram(aes(y=..density..),
-                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")
-
-
-}
-
-
-
-
-bp.interaction <- list()
-for(i in 1:length(variables)){
-  variable <- variables[i]
-  bp.interaction[[i]]<-ggplot(general_data,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()
-
-}
-
-bp.obese <- list()
-for(i in 1:length(variables)){
-  variable <- variables[i]
-  bp.obese[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=OBESE))+geom_boxplot()
-
-}
-
-bp.group <- list()
-for(i in 1:length(variables)){
-  variable <- variables[i]
-  bp.group[[i]]<-ggplot(general_data,aes_string(x=SEX,y=variable,fill=GROUP))+geom_boxplot()
-
-}
-
-
-```
-
-At first sight, we can observe that only the mean basal glucose levels follows a normal distribution. The other variables, are right skewed. Maybe because the distribution differs between groups. But the distribution of the variables also suggest a logarithmic distribution.
+Due to the fact that `SHBG` is linked with sex steroids, sex, obesity and age; we are going to plot the globulin, total and free testosterone and estradiol. And we are also going to describe the relationships between age, BMI, WHR and WC. BUt firstly, let's inspect the distribution, of the protein and the sex steroids. 
 ```{r chunk7}
-do.call(grid.arrange,hist.list[5:13])
+do.call(grid.arrange,hist.list[5:10])
 ```
 
+At first sight, we observe that the variables plotted doesn't follow a normal distribution. Instead, all of them appear to follow a skewed right distribution. This could be due to the different groups. And the free sex steroids, more than skewed distributions seems to follow a bimodal distribution.
 
 Secondly, let's inspect the variables for possible patterns between obese subjects.
 
-
-```{r}
+```{r chunk8}
 do.call(grid.arrange,bp.interaction[5:10])
 do.call(grid.arrange,bp.obese[5:10])
 do.call(grid.arrange,bp.group[5:10])
@@ -456,7 +451,7 @@ lm.TE2<-ggplot(general_data,aes(SHBG, Total_ESTR))+ geom_smooth(method=lm,formul
 
 lm.TE2+facet_wrap(.~ OBESE+GROUP)
 
-lm.freeE2<-ggplot(general_data,aes(SHBG, Free_ESTRA))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Free Etradiol")
+lm.freeE2<-ggplot(general_data,aes(SHBG, Free_ESTRA))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Free Estradiol")
 
 lm.freeE2+facet_wrap(.~ OBESE+GROUP)
 
@@ -464,398 +459,244 @@ lm.ratio<-ggplot(general_data,aes(SHBG, RatioFreeTE2))+ geom_smooth(method=lm,fo
 
 lm.ratio+facet_wrap(.~ OBESE+GROUP)
 
+lm.age <- ggplot(general_data,aes(EDAD,SHBG))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("SHBG");
+lm.age+facet_wrap(.~ OBESE+GROUP)
+
+lm.bmi <- ggplot(general_data,aes(BMI,SHBG))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("SHBG");
+lm.bmi+facet_wrap(.~ OBESE+GROUP)
+
+lm.WC <- ggplot(general_data,aes(WC,SHBG))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("SHBG");
+lm.WC+facet_wrap(.~ OBESE+GROUP)
+
+lm.WHR <- ggplot(general_data,aes(WHR,SHBG))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("SHBG");
+lm.WHR+facet_wrap(.~ OBESE+GROUP)
+
 ```
 
-The SHBG is a protein that binds with sex hormones. This means that when SHBG increases, the free sex steroids diminishes, but the total sex steroids, augments, being the result of the sum.  Women sex steroid E2 and men Testosterone. Therefore for health subjects and non-obese we expect to have a higher concentration of E2 in women and lower in men. The contrary happens with testosterone. On obese subjects, the SHBG, have lower levels than non-obese. In obese women, tent to have slightly levels of total testosterone, but it is barley appreciable, than non-obese women. Obese men, have lower levels of total tesosterone than non-obese men. Free testosterone, has the same behavior in women. But in men, free testosterone, is higher in obese than non-obese. PCOS women, have similar values of SHBG than control women and higher concentration of testosterone levels. 
+The SHBG is a protein that binds with sex hormones. This means that when SHBG increases, the free sex steroids diminishes because they are bind to the globulin, but the total sex steroids, augments. Therefore for health subjects and non-obese we expect to have a higher concentration of E2 in women and lower in men. The contrary happens with testosterone. On obese subjects, the SHBG, have lower levels than non-obese. In obese women, tent to have slightly levels of total testosterone, but it is barley appreciable, than non-obese women. Obese men, have lower levels of total testosterone than non-obese men. Free testosterone, has the same behavior in women. But in men, free testosterone, is higher in obese than non-obese. PCOS women, have similar values of SHBG than control women and higher concentration of testosterone levels. 
 
 The SHBG is higher in women independently if they have PCOS or not. Regarding E2, the concentration is higher in obese subjects than non-obese subjects. And higher in women irrespective if they have PCOS than men. E2 have lower concentration in PCOS women than control women. 
 
-The ratio of both free sex steroids is higher in non-obese subjects, and higher in men. But it is not distinguishable between obese and non-obese PCOS women
-```{r}
+The ratio of both free sex steroids is higher in non-obese subjects, and higher in men. But it is not distinguishable between obese and non-obese PCOS women.
+
+As expected, SHBG increases with age, being this correlation positive, the highest in non-obese women with PCOS, followed by obese men, non-obese women, obese women, PCOS obese women, and almost without correlation in healthy men.
+
+Regarding BMI, and WC the data shows a positive correlation with SHBG in healthy men, obese women, and non-obese PCOS women. On the other hand, a negative correlation is found in healthy women, obese PCOS women and obese men. WHR correlated with SHGB follows a similar pattern between subjects but not on healthy men, in which this correlation becomes negative, due to the men and women body shape relationships.
+
+#### hsCRP, HOMA-IR, ISI, insulin, glucose, lipds and their relationship.
+
+
+
+`hsCRP` Is a blood test that measures the abundance of C-Reactive Protein (CRP), which is an annular pentameric protein found in blood plasma, whose concentration rise in response of inflammation. It binds to **lysophosphatidylcholine** expressed on the *surface* of dead or dying cells and some types of **bacteria**, in order to activate the complement system. Synthesized by the liver, in response for *interleukin-6 released by macrophagues,T cells and fat cells*. CRP binds to to the **phosphocholine**. Inflammatory conditions also produces **cytokines** that trigger its synthesis. High concentration of this protein is associated with metabolic inflammation: metabolic pathways that cause arteriosclerosis and type II diabetes mellitus. Normal levels of this protein increases with age. Furthermore, obesity is linked with inflammation pathways **REFERENCE!!** and recent research suggest that patients.with elevated basal levels of CRP are at an increased risk of diabetes,and cardiovascular diseases. hs-CRP levels may not per se be associated with PCOS, rather can be related to fat mass in this subset of subjects. Also high levels of this protein are correlated with hyperinsulinaemia. 
+
+HOMA, the homeostatic model assessment, is method used to quantify insulin resistance (**HOMA-IR**) and beta-cell function. The model describes glucose regulation as feedback loop. It is calculated as $HOMA-IR = \frac{Glucose \times Insulin}{22.5}$. 
+
+Insulin sensitivity index, is also a method for measuring insulin resistance. It is calculated as $\frac{1}{log(insulin_{fasting}[\mu U/mL])+log(glucose_{fasting} [mg/dL])}$. `ISI` is the inverse of the insulin resistance (IR).
+
+As we did above with the sex steroids, firstly let's inspect the distribution:
+
+```{r chunk9}
+do.call(grid.arrange,hist.list[11:16])
+do.call(grid.arrange,hist.list[17:19])
+```
+
+It is observed that almost all variables plotted here are right skewed, unless HDL, LDL cholesterol, and mean fasting glucose. 
+
+
+
+```{r chunk10}
 do.call(grid.arrange,bp.interaction[11:16])
-do.call(grid.arrange,bp.obese[11:16])
-do.call(grid.arrange,bp.group[11:16])
-
-lm.glu<-ggplot(general_data,aes( GlucosaBasal_mean,InsulinaBasal_mean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
-
-lm.glu+facet_wrap(.~ OBESE+GROUP)
-
-
-
-
-lm.isi<-ggplot(general_data,aes(InsulinaBasal_mean, SOG_ISI))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
-
-lm.isi+facet_wrap(.~ OBESE+GROUP)
-
-lm.homair<-ggplot(general_data,aes(InsulinaBasal_mean, HOMAIRmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")
-
-lm.homair+facet_wrap(.~ OBESE+GROUP)
-
 do.call(grid.arrange,bp.interaction[17:19])
-do.call(grid.arrange,bp.obese[17:19])
-do.call(grid.arrange,bp.group[17:19])
+```
+Regarding the mean values of basal insulin, there is higher concentration of this protein in obese subjects than non-obese. Furthermore, there are also high basal levels of glucose on obese subjects in comparison with non-obese. However, at first sight this difference in male is not observable.
+
+hsCRP, is higher in obese women in general but there is no difference in men. Meanwhile the ISI is higher in non-obese subjects, the HOMA-IR model gives high values  for obese subjects in general as well as triglycerides, LDL and Cholesterol. The HDL on the contrary show lower levels in obese subjects and higher levels in non-obese subjects. 
+
+Regarding relationships between these variables; firstly, let's see de relationships between HOMA-IR, ISI, glucose and insulin between all subjects.
+
+```{r chunk11}
+lowerFn <- function(data, mapping, method = "lm", ...) {
+  p <- ggplot(data = data, mapping = mapping) +
+    geom_point(colour = "blue") +
+    geom_smooth(method = method, color = "red", ...)
+  p
+}
+
+ggpairs(
+  general_data[,17:20], lower = list(continuous = wrap(lowerFn, method = "lm")),
+  diag = list(continuous = wrap("barDiag", colour = "blue")),
+  upper = list(continuous = wrap("cor", size = 5))
+)
+```
+Insulin and glucose show a positive correlation tough not significance, but this relationship is well known. Furhtermore, we have to take into account that we are measuring all subjects.
+
+Given the definition of HOMA-IR and ISI, it is obvious that glucose-HOMA-IR and insulin-HOMA-IR correlation are positive. And negative respect to ISI. And given the fact that HOMA-IR is proportional to glucose and insulin and ISI is inversely proportional, it is logical that this correlation is negative. 
+
+In order to observe further relationships, we are going to use HOMA-IR model.
+
+Now we are going to observe the relationship as a whole of hsCRP, HOMAIR, age, BMI. In other plot we are going to visualize the relationship between hsCRP and lipids.
+
+```{r chunk12}
+corr_1 <- cor(general_data[,c(6,7,16,20:24)])
+ggcorrplot(corr_1,lab=T) ## correlation plot
+```
+
+The following variables: BMI, hsCRP and HOMA-IR all of them correlates positively with each other. 
+
+```{r chink13}
+lm.hcrpbmi <- ggplot(general_data,aes(hsCRP,BMI))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("BMI kg/m2");
+lm.hcrpbmi+facet_wrap(.~ OBESE+GROUP)
+
+lm.hcrpwc <- ggplot(general_data,aes(hsCRP,WC))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("WC cm");
+lm.hcrpwc+facet_wrap(.~ OBESE+GROUP)
+
+lm.hcrpwhr <- ggplot(general_data,aes(hsCRP,WHR))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("WHR");
+lm.hcrpwhr+facet_wrap(.~ OBESE+GROUP)
+```
+As it said by the literature, this relationship it is not related with PCOS, but rather with obesity: the data tells us in the relationship between BMI and this protein is positively correlated in all groups but not on obese males. Regarding WC, all subjects present a positive correlation likewise WHR.
+
+```{r}
+lm.homair <- ggplot(general_data,aes(hsCRP,HOMAIRmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("HOMA-IR");
+lm.homair+facet_wrap(.~ OBESE+GROUP)
 
 ```
 
+Regarding `hsCRP` variable and its correlation with HOMA-IR model, this variable, `HOMAIR` tells us about the insulin resistance. There is no relationship between `hsCRP` and `HOMAIR` variables in obese females, but a positive correlation exist in males. Furthermore the values for these subjects indicates a IR (HOMAIR > 1.96).
 
-Regarding the mean values of basal insulin, there is higher concentration of this protein in obese subjects than non-obese. Furthermore, there are also high basal levels of glucose on obese subjects in comparison with non-obese. However, at first sight this difference in male is not observable. Regarding the correlation, in healthy subjects, it is known that there is a negative correlation between insulin and glucose, but o non-obese PCOS females and obese males this correlation is positive. 
+```{r chunk14}
+lm.TG <- ggplot(general_data,aes(hsCRP,TGmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Triglicerids");
+lm.TG+facet_wrap(.~ OBESE+GROUP)
 
-The high-sensitivity C-reactive protein (hs-CRP) test is a blood test that finds lower levels of C-reactive protein (CRP). This protein measures general levels of inflammation in your body. The hs-CRP can be used to find the risk for heart disease and stroke in people who don't already have heart disease.
+lm.TG <- ggplot(general_data,aes(hsCRP,COLmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("Cholesterol");
+lm.TG+facet_wrap(.~ OBESE+GROUP)
 
-The hs-CRP test is different than the standard CRP test. The standard test measures high levels of the protein to find different diseases that cause inflammation. The hs-CRP test measures low levels and focuses on the risk of heart disease and stroke. 
+lm.TG <- ggplot(general_data,aes(hsCRP,HDLmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("HDL");
+lm.TG+facet_wrap(.~ OBESE+GROUP)
 
-hsCRP, is higher in obese women in general but there is no difference in men. Menwile the ISI is higher in non-obese subjects, the HOMA-IR model gives high values  for obese subjects in general as well as triglicerids, LDL and Cholesterol. The HDL con the contrary show lower levels in obese subjects and higher levels in non-obese subjects. 
+lm.TG <- ggplot(general_data,aes(hsCRP,LDLmean))+ geom_smooth(method=lm,formula = y~x,se=T)+geom_point(size=3)+  stat_cor(aes(label = ..r.label..), color = "red", geom = "label")+ylab("LDL");
+lm.TG+facet_wrap(.~ OBESE+GROUP)
 
 
-```{r}
-bp.3.vars<-function(vars,x_lab,y_lab){
+```
+
+A negative correlation between TG and hsCRP is observed across subject except on obese PCOS women, and males. Regarding cholesterol the difference is observed by sex. On women the correlation between Cholesterol and hsCRP is negative, while in men is positive. HDL-cholesterol and hsCRP show a negative correlation in healthy women, Obese PCOS, and healthy males. And a positive correlation in non-obese PCOS women and obese control women. It seems that in obese males correlation does not exist. LDL cholesterol and hsCRP show a positive correlation in men, and a negative correlation in women in general. 
+
+
+
+### Description of variables along the 3 days of study
+
+Firstly let's see the distribution of the variables.
+```{r chunk15}
+## Function that takes variable names and the labels for the axis.
+bp.1.vars<-function(vars,y_lab){
   
   datos <- cbind(general_data[,c("GROUP","OBESE")],general_data[,vars])
   df.melt<-melt(datos,id.vars=c("GROUP","OBESE"))
+  
     # print(head(df.melt))
 
 
-  p0<-ggplot(df.melt,aes(y=value,x=variable))+geom_boxplot()+xlab(x_lab)+ylab(y_lab)
-  p1<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)
-  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=OBESE))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)
-  
-  lista<-list(todo=p0,grupo=p1,obesos=p2)
-  return(lista)
-  
-}
-
-
-bp.1.vars<-function(vars,x_lab,y_lab){
-  
-  datos <- cbind(general_data[,c("GROUP","OBESE")],general_data[,vars])
-  df.melt<-melt(datos,id.vars=c("GROUP","OBESE"))
-    # print(head(df.melt))
-
-
-  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+xlab(x_lab)+facet_grid(~OBESE)
+  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+facet_grid(~OBESE)+xlab("")
   
   
   return(p2)
   
 }
-
-
-
-
-do.call(grid.arrange,bp.3.vars(c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),x_lab = "",y_lab="pmol/L"));
-bp.1.vars(vars = c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),"",y_lab="pmol/L")
-do.call(grid.arrange,bp.3.vars(c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),x_lab = "",y_lab="mmol/L"));
-bp.1.vars(vars = c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),"",y_lab="pmol/L")
-do.call(grid.arrange,bp.3.vars(c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),x_lab = "",y_lab="mmol/L"));
-bp.1.vars(vars = c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),"",y_lab="pmol/L")
-do.call(grid.arrange,bp.3.vars(c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),x_lab = "",y_lab="mmol/L"));
-bp.1.vars(vars = c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),"",y_lab="pmol/L")
-do.call(grid.arrange,bp.3.vars(c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),x_lab = "",y_lab="mmol/L"));
-bp.1.vars(vars = c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),"",y_lab="pmol/L")
-do.call(grid.arrange,bp.3.vars(c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),x_lab = "",y_lab="mmol/L"));
-bp.1.vars(vars = c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),"",y_lab="pmol/L")
-
-
 ```
 
-The mean values of insulin are lower in non-obese men than non-obese women, however, these values increase in obese subjects, specially in obese PCOS. But the basal level on the lipid load day, the obese PCOS patients shows the highest values.
 
-The mean values of  basal glucose are higher in obese subjects. Across the three days of the study, similar values hold as expected. Again being higher in obese subjects and lower levels in PCOS patients and higher in men.
+#### HOMAIR
 
-Regarding triglicerdis mean basal levels, de levels are lower in control women, followed by PCOS and higher in men. In general, these values are higher in obese subjects. These relationship holds across the three days of the study. 
+```{r}
+##HOMAIR plots
 
 
-The mean value of cholesterol levels are similar across subjects, being higher in obese subjects. If we observe these values by day, on non-obese females theese values are higher than PCOS and men in non-obese subjects. But on obese subjects these values are higher in men and PCOS women.
+do.call(grid.arrange,hist.list[26:28])
+bp.1.vars(c(31:33),"HOMA-IR")
+```
 
-The mean values of HDL cholesterol are higher in women as a whole in women than men. Being higher in non-obese subjects. With similar values in control women and PCOS women. Diring the study the relationship holds. 
 
-The mean values of LDL cholesterol, are similar across subjects. However if we take a close look at non-obese subjects, these values are higher in obese subjects. Between non-obese subjects the higher values are for healthy women. During the three days that took the study, in obese subjects, higher values have PCOS and men.
+The distribution across the three days is right skewed. Moreover,the relationship among groups remain constant, tough there is a progressively increase of HOMA-IR values on the subsequent days in non-obese subjects. HOMA-IR values across obese subjects is higher, being PCOS women with the highest values.
+
+#### Insulin
+
+```{r chunk_insulin}
+### Insulin basal and postpradrial
+do.call(grid.arrange,c(hist.list[c(20:22,29:31)],list(nrow=2,ncol=3)))
+
+p1<-bp.1.vars(c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),"basal insulin")
+p2<-bp.1.vars(c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),"postpradrial insulin")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
+```
+
+Basal insulin shows a right skewed distribution, though postprandrial distribution of insulin seems to follow more like a normal distribution. On obese subjects, the insulin levels are higher basal and postpradrial. Basal insulin is higher on PCOS obese women, but the relationship remains almost without change across all days. Postpradrial levels are remarkably higher on the glucose oral load day, followed by the last day, i.e the protein load day. With valoues also higher in woman with PCOS.
+
+
+#### Glucose
+```{r}
+### glucose basal and postpradrial
+do.call(grid.arrange,c(hist.list[c(23:25,32:34)],list(nrow=2,ncol=3)))
+
+p1<-bp.1.vars(c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),"basal glucose")
+p2<-bp.1.vars(c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),"postpradrial glucose")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
+```
+Basal and postpradrial distribution of gluclose tent to follow a normal distribution. In general, postrpadrial levels of glucose are lower than basal levels. Between groups, in basal levels of glucose, obese subjects have higher levels of glucaemia. Between them, females have the highest value across all days being the glucose oral day the one with the most higher levels. On non obese subjects, males have the higher levels of glucemia. Obese women with PCOS have the lowest values of glucose in blood, though higher than non-obese PCOS women.
+
+
+#### Triglicerids
 
 
 ```{r}
-do.call(grid.arrange,bp.3.vars(c("SOG_HOMAIR","SOL_HOMAIR","SOP_HOMAIR"),x_lab = "",y_lab=""))
-bp.1.vars(vars = c("SOG_HOMAIR","SOL_HOMAIR","SOP_HOMAIR"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),x_lab = "",y_lab="pmol/L"))
-bp.1.vars(vars = c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),x_lab = "",y_lab="mmol/L"))
-bp.1.vars(vars = c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),x_lab = "",y_lab="mmol/L"))
-bp.1.vars(vars = c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),x_lab = "",y_lab="mmol/L"))
-bp.1.vars(vars = c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),x_lab = "",y_lab="mmol/L"))
-bp.1.vars(vars = c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),"",y_lab="pmol/L")
-
-do.call(grid.arrange,bp.3.vars(c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),x_lab = "",y_lab="mmol/L"))
-bp.1.vars(vars = c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),"",y_lab="pmol/L")
-
+## Triglicerids
+do.call(grid.arrange,c(hist.list[35:40],list(nrow=2,ncol=3)))
+p1<-bp.1.vars(c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),"basal triglicerids")
+p2<-bp.1.vars(c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),"postpradrial triglicerids")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
 
 ```
-
-HOMA, the homeostiatic model assessment, is mathod used to quantify insulin resiance and beta-cell function. The model describes glucose regulation as feedback loop. It is calculated as $HOMA-IR = \frac{Glucose \times Insulin}{22.5}$ Both parameters are taken during fasting. Levels for this model remain almost with no variation. Being these values higher in obese subjects.
-
-Postpradrial insulin levels are similar across all subjects being the obese ones that have higher values on the first day of the study that belongs to the glucose load. The levels on the protein load day are less than the glucose load day but higher than the lipid load day.
-
-Postpradrial glucose levels are higher in men and PCOS women. Furthemore this levels are higher in obese subjects. The days not belonging to the glucose load are similar.
-
-Postpradrial triglicerids levels are similar across all subjects being higher the lipid load day
-
-Postpradrial cholesterol levels are decreases progresivly across the days. Being slighly higher on obese subjects. HDL and LDL levels show similar behavior.
+Distributions basal and postpradrial levels of triglicerids follow a right skewed  distribution but a normal one on postpradrial levels on the load lipid and protein days. The triglicerids levels are higher at basal state than postpradrial. There are different distributions between groups across days in basal state. But these values are higher in obese subjects. Postpradrial levels also, the distribution between groups is different each day, but lower on the protein load day. Although similar distributions across all subjects. 
 
 
-
-
-
-
-
-
-
-
-
-
-
+#### Cholesterol
 
 ```{r}
-four_plots(general_data,"TOTAL_TEST")
+### Cholesterol
+do.call(grid.arrange,c(hist.list[41:46],list(nrow=2,ncol=3)))
+p1<-bp.1.vars(c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),"basal cholesterol")
+p2<-bp.1.vars(c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),"postpradrial cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
 ```
+Regarding the distributions, all of them seems to follow a normal one except basal cholesterol on day 1 and postpradrial cholesterol the 3th day being the first one right skewed and the lastone left skewed.
 
-Total testosterone, by far in more concentration in men than in women. At simple sight, there is no difference between obese and non obese subjects. But is higher in PCOS women than control women. Control women non obese is lower the concentration tha obese. While in PCOS women, this distribution sweeps, but in higher concetnrations
-```{r}
-four_plots(general_data,"FREE_TEST")
-```
+Basal levels of cholesterol are higher in obese subjects, though obese and non-obese females show a similar distribution, and PCOS and men show more variance. At postpradrial stage, the levels of cholesterolemia diminshes. With higher levels of cholesterol at the glucose and lipid load in women with PCOS. 
 
-Free testosterone, follows the same distribution, in the sense that men have the higher concentration, followed by PCOS women and control women. And in general obese subjects have more Free testosterone than non.obese. 
 
-```{r}
-four_plots(general_data,"Total_ESTR")
-```
-Total estradiol, obviously is higher in control women, followed by PCOS and by men. In general, is higher in obese subjects.
+#### HDL
 
 ```{r}
-four_plots(general_data,"Free_ESTRA")
+### Cholesterol HDL
+do.call(grid.arrange,c(hist.list[47:52],list(nrow=2,ncol=3)))
+p1<-bp.1.vars(c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),"basal HDL cholesterol")
+p2<-bp.1.vars(c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),"postpradrial HDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
 ```
-Free estradiol, folows the same distribution than total estradiol
-```{r}
-four_plots(general_data,"RatioFreeTE2")
-```
+Regarding distribution of basal and postpradrial levels of HDL cholesterol, only the AUC of HDL on the glucose day follows a normal one. Basal levels show a slightly right skewed distribution, and the other AUC on the second and thirth day follow a left skewed distribution.
 
-This ratio, follows the same distribution than estriadiol.
+HDL distribution between groups, the data show a lower concentration of HDL cholesterol on obese subjects, and in general less HDL on men. With higher concentrations in PCOS non-obese patients and obese women. At postpradrial level, in general the subjects present lower concentrations than at the basal levels. At this stage, higher levels of HDL are present in obese subjects, with no clear pattern among the days.
 
-#### High Sensitivty C-reactive protein
-
-```{r}
-four_plots(general_data,"hsCRP")
-```
-Regarding hsCRP, we observe certain outliers. In general, hsCRP is higher in obese subjects than non-obese. However, this relatioship is higher in non-obese males tan obese men. And PCOS obese women, the concentration is higher
-
-#### Basal Insulin mean value
-```{r}
-four_plots(general_data,"InsulinaBasal_mean")
-```
-Though skweed, the data seems to follow a normal distribution. The mean basal levels of insulin are higher in obese subjects than non-obese. The mean levels of basal insulin are higher in women than in men. But less higher in PCOS women than control. But this levels increase in obese PCOS women.
-
-#### Glucose mean basal levels
-```{r}
-four_plots(general_data,"GlucosaBasal_mean")
-```
-Overall, this relationship follows a normal distribution withno outliers. These levels of glucose are higher in obese subjects. And higher in men. But obese control women have the greatest values. 
-
-
-#### Insulin Sensitivy Index when challenge glucose. 
-
+#### LDL
 
 ```{r}
-four_plots(general_data,"SOG_ISI")
+### Cholesterol HDL
+do.call(grid.arrange,c(hist.list[53:58],list(nrow=2,ncol=3)))
+p1<-bp.1.vars(c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),"basal LDL cholesterol")
+p2<-bp.1.vars(c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),"postpradrial LDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(p1,p2)
 ```
-Regargin the challenge glucose day for measuring the insulin sensitivy indes, the vallues follow a skweed distribution but mainly because one sample, a non-obese PCOS women. In general these values are higher in non-obese subjects.
+Distribution of LDL cholesterol at basal levels are slightly left skewed and at postpradrial stage, are right skewed, though on the first day the distribution is left skewed.
 
-#### HOMAIR mean
-```{r}
-four_plots(general_data,"HOMAIRmean")
-```
-
-The model for the insulin resistance, follows a normal distribution. Beeing this homeostasis model, higher in obese subjects than non-obese. And in PCOS obese subjects this model increases at its maximum.
-
-#### TG mean
-```{r}
-four_plots(general_data,"TGmean")
-```
-
-Triglicerids conectration at basal leves between the 3 days are higher between obese subjects and PCOS women than control.
-
-#### Mean colesterol
-```{r}
-four_plots(general_data,"COLmean")
-```
-Basal levels of colesterol are lower in control subjects than obese subjects. And these values are higher in female than males. But this association changes between obese subjects.
-
-
-#### HDL mean
-
-
-```{r}
-four_plots(general_data,"HDLmean")
-```
-
-HDL has higher concetration in non-obese subjects than obese subjects. And higher in women than in men. PCOS women have higher values.
-
-
-#### LDL mean
-```{r}
-four_plots(general_data,"LDLmean")
-```
-
-LDL particles, have higher conectration in obese subjects than non-obese.  And similar values with women with PCOS and men.
-
-### General overview.
-
-
-
-
-
-
-
-
-
-### Correlationships.
-Let's do some correlation plots/scatter plots.
-
-
-```{r}
-
-```
-
-As we observe earlier, the total testosterone, is much higher in men. The correlation between SHBG in men is higher in obese men than non-obese. But this values are somewhat similar between control women both obese and non-obese. But when it comes to PCOS women, this relationship is lower, beeing lowest in obese PCOS subjects.
-
-On the other side, this relatioship is negatvie for free testosterone. Between men, this relationship is lower in non-obeese, beeing the lowest value. In general, on obese subjects this relationship is weaker than non-obese. Between non-obese female, PCOS and men, this negative relationship is progesvly weaker. And This relatioship is even weaeker between obese subjects.
-```{r}
-
-```
-Regarding total estradiol, the correlation is positive for control women, and negative for men and PCOS women. Beeing this relationship the most negative in control men. Between PCOS women, the relatipship almost does not exist in PCOS-non obese women.
-
-```{r}
-
-```
-
-Regarding free estradiol, in control women is interesingly that obese women is positive, but in non-obese women control is negative. This relatipnship betweehn SHBG and free estradiol the most negative value is between non-obese male. The following value is between obese PCOS women.
-```{r}
-
-
-```
-
-The ratio beteen FreeTestosterone and Estradiol have it higher in obese  males followed by non obese. This correlatioship is positive in men and obese womenwith PCOS. Furthermoe this correlationship is almost inexisten though negative in control non-obese women.
-```{r}
-
-```
-
-
-
-In order to understand the data, we have all basal levels, but there are some in which they have only 1 day and other the mean of the three days. 
-
-
-The meaning of the 61 variables are:
-
-| Variable 	| Description 	|
-|:---:	|:---:	|
-| Orden 	| Order of the subjects 	|
-| Paciente 	| Women contol (M),PCOS women (P),Male (V), d (Not obese), O (Obese), GLP (challenge macronutrients: glucose, lipids, proteins) 	|
-|  	<br>SEX 	| 0 Women, 2 Male 	|
-|  	<br>GROUP 	| 0 Women Control, 1 PCOS, 2 Male 	|
-|  	<br>OBESE 	| 0 Not obese, 1 Obese 	|
-| EDAD 	| Age 	|
-| BMI 	| Body Mass Index 	|
-| WC 	| Waist circumference 	|
-| WHR 	| Waist to hip ratio 	|
-| SHBG 	| Sex hormone-binding protein 	|
-| TOTAL_TEST 	| Total testosterone (T) 	|
-| FREE_TEST 	| Free testosterone 	|
-| Total_ESTR 	| Total estradiol (E2) 	|
-| Free_ESTRA 	| Free estradiol 	|
-| RatioFreeTE2 	| Free T/FreeE2 ratio 	|
-| hsCRP 	| High sensitivity C-reactive protein 	|
-| InsulinaBasal_mean 	| Mean basal insluin 	|
-| GlucosaBasal_mean 	| Mean basal glucose 	|
-| SOG_ISI 	| Insulin sensitivity index (it is only calculated on the challenge oralglucose day) 	|
-| HOMAIRmean 	| Homeostasis model assessment of insulin resistance (mean of the three days) 	|
-| TGmean 	| Triglicerids (Basal. mean of the three challenges) 	|
-| COLmean 	| Total Cholesterol (Basal. mean of the three challenges) 	|
-| HDLmean 	| HDL Cholesterol (Basal. mean of the three challenges) 	|
-| LDLmean 	| LDL Cholesterol (Basal. mean of the three challenges) 	|
-| SOG_INS_B 	| Basal insulin when challenge oral glucose day 	|
-| SOL_INS_B 	| Basal insulin when challenge oral lipid day 	|
-| SOP_INS_B 	| Basal insulin when challenge oral protein day 	|
-| SOG_GLC_B 	| Basal glucose when challenge oral glucose day 	|
-| SOL_GLC_B 	| Basal glucose when challenge oral lipid day 	|
-| SOP_GLC_B 	| Basal glucose when challenge oral protein day 	|
-| SOG_HOMAIR 	| HOMAIR Glucose Oral Challenge day 	|
-| SOL_HOMAIR 	| HOMAIR Lipid Oral Challenge day 	|
-| SOP_HOMAIR 	| HOMAIR Protein Oral Challenge day 	|
-| SOG_INS_AUC 	| Area Under the Curve of the insulin on Glucose Oral Challenge 	|
-| SOL_INS_AUC 	| Area Under the Curve of the insulin on Lipids Oral Challenge 	|
-| SOP_INS_AUC 	| Area Under the Curve of the insulin on Proteins Oral Challenge 	|
-| SOG_GLU_AUC 	| Area Under the Curve of the Glucose on Glucose Oral Challenge 	|
-| SOL_GLU_AUC 	| Area Under the Curve of the Glucose on Lipids Oral Challenge 	|
-| SOP_GLU_AUC 	| Area Under the Curve of the Glucose on ProteinsOral Challenge 	|
-| SOG_TG_0 	| Triglicerids at basal level on Glucose Oral Challenge 	|
-| SOL_TG_0 	| Triglicerids at basal level on Lipid Oral Challenge 	|
-| SOP_TG_0 	| Triglicerids at basal level on Protein Oral Challenge 	|
-| SOGAUCTG 	| Triglicerids Area Under the Curve Oral Glucose Challenge 	|
-| SOLAUCTG 	| Triglicerids Area Under the Curve Oral Lipids Challenge 	|
-| SOPAUCTG 	| Triglicerids Area Under the Curve Oral Proteins Challenge 	|
-| SOG_COL_0 	| Cholesterol at basal level on Glucose Oral Challenge 	|
-| SOL_COL_0 	| Cholesterol basal level on Lipid Oral Challenge 	|
-| SOP_COL_0 	| Cholesterol at basal level on Protein Oral Challenge 	|
-| SOGAUCCOL 	| Cholesterol Area Under the Curve Oral Glucose Challenge 	|
-| SOLAUCCOL 	| Cholesterol Area Under the Curve Oral Lipids Challenge 	|
-| SOPAUCCOL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
-| SOG_HDL_0 	| HDL Cholesterol at basal level on Glucose Oral Challenge 	|
-| SOL_HDL_0 	| HDL Cholesterol basal level on Lipid Oral Challenge 	|
-| SOP_HDL_0 	| HDL Cholesterol at basal level on Protein Oral Challenge 	|
-| SOGAUCHDL 	| HDLCholesterol Area Under the Curve Oral Glucose Challenge 	|
-| SOLAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
-| SOPAUCHDL 	| HDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
-| SOG_LDL_0 	| LDL Cholesterol at basal level on Glucose Oral Challenge 	|
-| SOL_LDL_0 	| LDL Cholesterol basal level on Lipid Oral Challenge 	|
-| SOP_LDL_0 	| LDL Cholesterol at basal level on Protein Oral Challenge 	|
-| SOGAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Glucose Challenge 	|
-| SOLAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Lipids Challenge 	|
-| SOPAUCLDL 	| LDL Cholesterol Area Under the Curve Oral Proteins Challenge 	|
-
-
-In general SOG means Glucose Oral Challenge, SOL: Lipid Oral challenge, and SOP Protein Oral challenge.
-
-It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absortion of lipids by the intestine is slower. 
-
-
-
-
-
-## Univariate statistical analysis
-
-### Clinical data 
-
-First of all let's observe the structure of the data and a sample of it. Also let's observe is there any missingvalues. But first of all an extract of the data. 
-
-
-```{r structureClinicalData}
-str(general_data)
-```
-
-At first sight, we have 3 factor variables, sex, group, and obese. Furthermore we have the samples names and the order. The other variables are numeric. Thus let's convert into factor those categorical variables
-
-
-```{r}
-
-```
-
-
-
-
+LDL cholesterol levels are higher at basal time on obese subjects, with more variance in general.Obese men have the highest values. At postpradrial stage, levels decreases in comparison with basal time. Ob obese subjects, on the 1st and 2d day, PCOS women show higher values of LDL cholesterol.
 
 
 

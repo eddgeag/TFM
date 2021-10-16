@@ -46,7 +46,7 @@ if(any(res==F)){
 ```
 
 
-## Description of the data
+## Description of the clinical data
 
 
 The meaning of the 61 variables are:
@@ -120,12 +120,12 @@ The meaning of the 61 variables are:
 
 In general SOG means Glucose Oral Challenge, SOL: Lipid Oral challenge, and SOP Protein Oral challenge.
 
-It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absortion of lipids by the intestine is slower. 
+It has to be mentioned that SOG and SOP challenges were takes at 3 times: 0, 60 and 120 min. But SOL, the times differ: 0,120,240, because the absorption of lipids by the intestine is slower. 
 
 
 
 
-### Description of the clinical data.
+### Univariate descriptive analysis of clinical variables
 
 First of all we'll read all data. The route of the data is in the yaml header. The data is in xlsx format. 
 ```{r clnical_Data}
@@ -396,6 +396,7 @@ for(i in 1:length(variables)){
 For those variables, i.e age, WC, WHR and BMi, the distribution of the variables without grouping is the following.
 
 
+
 ```{r plothistfirst4}
 do.call(grid.arrange,hist.list[1:4])
 ```
@@ -588,15 +589,15 @@ A negative correlation between TG and hsCRP is observed across subject except on
 Firstly let's see the distribution of the variables.
 ```{r chunk15}
 ## Function that takes variable names and the labels for the axis.
-bp.1.vars<-function(vars,y_lab){
+bp.1.vars<-function(datos_,vars,y_lab){
   
-  datos <- cbind(general_data[,c("GROUP","OBESE")],general_data[,vars])
+  datos <- cbind(datos_[,c("GROUP","OBESE")],datos_[,vars])
   df.melt<-melt(datos,id.vars=c("GROUP","OBESE"))
   
     # print(head(df.melt))
 
 
-  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+facet_grid(~OBESE)+xlab("")
+  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+facet_grid(~OBESE)+xlab("") +geom_hline(yintercept=0, linetype="dashed", color = "red")
   
   
   return(p2)
@@ -612,7 +613,7 @@ bp.1.vars<-function(vars,y_lab){
 
 
 do.call(grid.arrange,hist.list[26:28])
-bp.1.vars(c(31:33),"HOMA-IR")
+bp.1.vars(general_data,c(31:33),"HOMA-IR")
 ```
 
 
@@ -621,27 +622,27 @@ The distribution across the three days is right skewed. Moreover,the relationshi
 #### Insulin
 
 ```{r chunk_insulin}
-### Insulin basal and postpradrial
+### Insulin basal and Postpradial
 do.call(grid.arrange,c(hist.list[c(20:22,29:31)],list(nrow=2,ncol=3)))
 
-p1<-bp.1.vars(c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),"basal insulin")
-p2<-bp.1.vars(c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),"postpradrial insulin")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_INS_B","SOL_INS_B","SOP_INS_B"),"basal insulin")
+p2<-bp.1.vars(general_data,c("SOG_INS_AUC","SOL_INS_AUC","SOP_INS_AUC"),"Postpradial insulin")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 ```
 
-Basal insulin shows a right skewed distribution, though postprandrial distribution of insulin seems to follow more like a normal distribution. On obese subjects, the insulin levels are higher basal and postpradrial. Basal insulin is higher on PCOS obese women, but the relationship remains almost without change across all days. Postpradrial levels are remarkably higher on the glucose oral load day, followed by the last day, i.e the protein load day. With valoues also higher in woman with PCOS.
+Basal insulin shows a right skewed distribution, though Postprandial distribution of insulin seems to follow more like a normal distribution. On obese subjects, the insulin levels are higher basal and Postpradial. Basal insulin is higher on PCOS obese women, but the relationship remains almost without change across all days. Postpradial levels are remarkably higher on the glucose oral load day, followed by the last day, i.e the protein load day. With valoues also higher in woman with PCOS.
 
 
 #### Glucose
 ```{r}
-### glucose basal and postpradrial
+### glucose basal and Postpradial
 do.call(grid.arrange,c(hist.list[c(23:25,32:34)],list(nrow=2,ncol=3)))
 
-p1<-bp.1.vars(c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),"basal glucose")
-p2<-bp.1.vars(c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),"postpradrial glucose")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_GLC_B","SOL_GLC_B","SOP_GLC_B"),"basal glucose")
+p2<-bp.1.vars(general_data,c("SOG_GLU_AUC","SOL_GLU_AUC","SOP_GLU_AUC"),"Postpradial glucose")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 ```
-Basal and postpradrial distribution of gluclose tent to follow a normal distribution. In general, postrpadrial levels of glucose are lower than basal levels. Between groups, in basal levels of glucose, obese subjects have higher levels of glucaemia. Between them, females have the highest value across all days being the glucose oral day the one with the most higher levels. On non obese subjects, males have the higher levels of glucemia. Obese women with PCOS have the lowest values of glucose in blood, though higher than non-obese PCOS women.
+Basal and Postpradial distribution of gluclose tent to follow a normal distribution. In general, postrpadrial levels of glucose are lower than basal levels. Between groups, in basal levels of glucose, obese subjects have higher levels of glucaemia. Between them, females have the highest value across all days being the glucose oral day the one with the most higher levels. On non obese subjects, males have the higher levels of glucemia. Obese women with PCOS have the lowest values of glucose in blood, though higher than non-obese PCOS women.
 
 
 #### Triglicerids
@@ -650,12 +651,12 @@ Basal and postpradrial distribution of gluclose tent to follow a normal distribu
 ```{r}
 ## Triglicerids
 do.call(grid.arrange,c(hist.list[35:40],list(nrow=2,ncol=3)))
-p1<-bp.1.vars(c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),"basal triglicerids")
-p2<-bp.1.vars(c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),"postpradrial triglicerids")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_TG_0","SOL_TG_0","SOP_TG_0"),"basal triglicerids")
+p2<-bp.1.vars(general_data,c("SOGAUCTG","SOLAUCTG","SOPAUCTG"),"Postpradial triglicerids")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 
 ```
-Distributions basal and postpradrial levels of triglicerids follow a right skewed  distribution but a normal one on postpradrial levels on the load lipid and protein days. The triglicerids levels are higher at basal state than postpradrial. There are different distributions between groups across days in basal state. But these values are higher in obese subjects. Postpradrial levels also, the distribution between groups is different each day, but lower on the protein load day. Although similar distributions across all subjects. 
+Distributions basal and Postpradial levels of triglicerids follow a right skewed  distribution but a normal one on Postpradial levels on the load lipid and protein days. The triglicerids levels are higher at basal state than Postpradial. There are different distributions between groups across days in basal state. But these values are higher in obese subjects. Postpradial levels also, the distribution between groups is different each day, but lower on the protein load day. Although similar distributions across all subjects. 
 
 
 #### Cholesterol
@@ -663,13 +664,13 @@ Distributions basal and postpradrial levels of triglicerids follow a right skewe
 ```{r}
 ### Cholesterol
 do.call(grid.arrange,c(hist.list[41:46],list(nrow=2,ncol=3)))
-p1<-bp.1.vars(c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),"basal cholesterol")
-p2<-bp.1.vars(c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),"postpradrial cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_COL_0","SOL_COL_0","SOP_COL_0"),"basal cholesterol")
+p2<-bp.1.vars(general_data,c("SOGAUCCOL","SOLAUCCOL","SOPAUCCOL"),"Postpradial cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 ```
-Regarding the distributions, all of them seems to follow a normal one except basal cholesterol on day 1 and postpradrial cholesterol the 3th day being the first one right skewed and the lastone left skewed.
+Regarding the distributions, all of them seems to follow a normal one except basal cholesterol on day 1 and Postpradial cholesterol the 3th day being the first one right skewed and the lastone left skewed.
 
-Basal levels of cholesterol are higher in obese subjects, though obese and non-obese females show a similar distribution, and PCOS and men show more variance. At postpradrial stage, the levels of cholesterolemia diminshes. With higher levels of cholesterol at the glucose and lipid load in women with PCOS. 
+Basal levels of cholesterol are higher in obese subjects, though obese and non-obese females show a similar distribution, and PCOS and men show more variance. At Postpradial stage, the levels of cholesterolemia diminshes. With higher levels of cholesterol at the glucose and lipid load in women with PCOS. 
 
 
 #### HDL
@@ -677,26 +678,360 @@ Basal levels of cholesterol are higher in obese subjects, though obese and non-o
 ```{r}
 ### Cholesterol HDL
 do.call(grid.arrange,c(hist.list[47:52],list(nrow=2,ncol=3)))
-p1<-bp.1.vars(c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),"basal HDL cholesterol")
-p2<-bp.1.vars(c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),"postpradrial HDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_HDL_0","SOL_HDL_0","SOP_HDL_0"),"basal HDL cholesterol")
+p2<-bp.1.vars(general_data,c("SOGAUCHDL","SOLAUCHDL","SOPAUCHDL"),"Postpradial HDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 ```
-Regarding distribution of basal and postpradrial levels of HDL cholesterol, only the AUC of HDL on the glucose day follows a normal one. Basal levels show a slightly right skewed distribution, and the other AUC on the second and thirth day follow a left skewed distribution.
+Regarding distribution of basal and Postpradial levels of HDL cholesterol, only the AUC of HDL on the glucose day follows a normal one. Basal levels show a slightly right skewed distribution, and the other AUC on the second and thirth day follow a left skewed distribution.
 
-HDL distribution between groups, the data show a lower concentration of HDL cholesterol on obese subjects, and in general less HDL on men. With higher concentrations in PCOS non-obese patients and obese women. At postpradrial level, in general the subjects present lower concentrations than at the basal levels. At this stage, higher levels of HDL are present in obese subjects, with no clear pattern among the days.
+HDL distribution between groups, the data show a lower concentration of HDL cholesterol on obese subjects, and in general less HDL on men. With higher concentrations in PCOS non-obese patients and obese women. At Postpradial level, in general the subjects present lower concentrations than at the basal levels. At this stage, higher levels of HDL are present in obese subjects, with no clear pattern among the days.
 
 #### LDL
 
 ```{r}
 ### Cholesterol HDL
 do.call(grid.arrange,c(hist.list[53:58],list(nrow=2,ncol=3)))
-p1<-bp.1.vars(c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),"basal LDL cholesterol")
-p2<-bp.1.vars(c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),"postpradrial LDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+p1<-bp.1.vars(general_data,c("SOG_LDL_0","SOL_LDL_0","SOP_LDL_0"),"basal LDL cholesterol")
+p2<-bp.1.vars(general_data,c("SOGAUCLDL","SOLAUCLDL","SOPAUCLDL"),"Postpradial LDL cholesterol")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
 grid.arrange(p1,p2)
 ```
-Distribution of LDL cholesterol at basal levels are slightly left skewed and at postpradrial stage, are right skewed, though on the first day the distribution is left skewed.
+Distribution of LDL cholesterol at basal levels are slightly left skewed and at Postpradial stage, are right skewed, though on the first day the distribution is left skewed.
 
-LDL cholesterol levels are higher at basal time on obese subjects, with more variance in general.Obese men have the highest values. At postpradrial stage, levels decreases in comparison with basal time. Ob obese subjects, on the 1st and 2d day, PCOS women show higher values of LDL cholesterol.
+LDL cholesterol levels are higher at basal time on obese subjects, with more variance in general.Obese men have the highest values. At Postpradial stage, levels decreases in comparison with basal time. Ob obese subjects, on the 1st and 2d day, PCOS women show higher values of LDL cholesterol.
+
+## Description of Intestinal Permeability Markers.
+
+Read the file of IP
+```{r IPmarkerssData}
+IP_file<-file.path(params$folder.data,file=params$file_IP) ## file path of the data
+IP.tmp<-read.xlsx(IP_file,sheetIndex = 1)
+```
+
+Observe the structure of the data
+```{r chunkip1}
+str(IP.tmp) # show general description of the data
+```
+
+We observe form the information displayed that there is a column of missing values. Furthermore, we have the same number of observations, 57, and 42 variables. Form these variables, 35 variables are new. 5 variables we have already have it from the previous analysis, and the first one is de order of the samples. Thus, in order to proceed we have to remove the missing value column. This column is only for visualization purposes in Excel. 
+
+We could merge the variables form the first dataset, but to be sure that the order of samples is not another, weare going to perform a sanity check. Furthermore, as in the clinical dataset, the categorical variables are in `character` class. So we need also to transform into factors. 
+
+
+```{r}
+IP<-IP.tmp[,-7] # remove the missin values column
+IP$SEX <- factor(IP$SEX,levels=c(0,2),labels = c("Female","Male"))
+IP$OBESE <- factor(IP$OBESE,levels=c(0,1),labels = c("No Obese","Obese"))
+IP$GROUP <- factor(IP$GROUP,levels=c(0,1,2),labels = c("Female","PCOS","Male"))
+all(IP$Paciente == general_data$Paciente) # sanity check.
+# str(IP)
+```
+
+The data comprises the following permeability markers.
+
+1. CD14
+
+Cluster differentiation 14 (CD14), is a human protein  made mostly by macrophages as part of the innate immune system. Detects **bacteria** in the body by  binding **lipopolysaccharide** (LPS), a pathogen-associated molecular pattern. It is anchored to the membrane by a **glycosylphosphatidylinositol** (GPI) CD14 acts as a co-receptor (along with the *Toll-like receptor TLR 4 and MD-2*) for the detection of bacterial lipopolysaccharide (LPS). CD14 can bind LPS only in the presence of **lipopolysaccharide-binding protein (LBP)** but also recognizes other pathogen-associated molecular patterns such as *lipoteichoic acid* soluble
+
+2. LBP
+
+Lipopolysaccharide binding protein: LBP is a soluble acute-phase protein that binds to bacterial lipopolysaccharide (or LPS) to elicit immune responses by presenting the LPS to important cell surface pattern recognition receptors called CD14 and TLR4. The protein encoded by this gene is involved in the acute-phase immunologic response to gram-negative bacterial infections. 
+The protein encoded by this gene is involved in the acute-phase immunologic response to gram-negative bacterial infections. The proinflammatory activity of plasma LPS is increased by LPB, which is higher in obesity Lipopolysaccharide-binding protein has been shown to interact with CD14, TLR2, TLR4 and the co-receptor MD-2
+
+
+3. GLP2
+
+
+Glucagon-like peptide 2 (GLP-2) is a 33 amino acid peptide-encoded carboxyterminal to the sequence of GLP-1 in the proglucagon gene. Both GLP-1 and GLP-2 are secreted from gut endocrine cells and promote nutrient absorption through distinct mechanisms of action. GLP-2 regulates gastric motility, gastric acid secretion, intestinal hexose transport, and increases the barrier function of the gut epithelium. GLP-2 reduces mortality and decreases mucosal injury, cytokine expression, and bacterial septicemia in the setting of small and large bowel inflammation. 
+
+
+
+4. Zonulin
+
+Zonulin (haptoglobin 2 precursor) is a protein that modulates the permeability of tight junctions between cells of the wall of the digestive tract.  Type 2 diabetic patients have shown increased zonulin
+
+
+5. Succinate
+
+Activation of inflammatory macrophages through toll-like receptors induces a metabolic shift towards glycolysis.....Actually is a metabolite 
+
+For each intestinal permeability marker, it is measured at basal stage and mean, for each day corresponding to every marcronutrient load. For each day they only measured values at basal time and at 60 minutes or 120 minutes, depending if it the load was lipids or not.
+
+
+### Description of the variables 
+
+| Variable 	| Description 	|
+|:---:	|:---:	|
+| Orden 	| Order of the subjects 	|
+| Paciente 	| Women contol (M),PCOS women (P),Male (V), d (Not obese), O (Obese), GLP (challenge macronutrients: glucose, lipids, proteins) 	|
+|  	<br>SEX 	| 0 Women, 2 Male 	|
+|  	<br>GROUP 	| 0 Women Control, 1 PCOS, 2 Male 	|
+|  	<br>OBESE 	| 0 Not obese, 1 Obese 	|
+| BMI 	| Body Mass Index 	|
+| CD14_basalmean 	| Mean basal concentration: Cluster differentiation 14 (CD14) 	|
+| G_CD14_0 	| Basal time Glucose load day: Cluster differentiation 14 	|
+| L_CD14_0 	| Basal time Lipid load day: Cluster differentiation 14 	|
+| P_CD14_0 	| Basal time Protein load day: Cluster differentiation 14 	|
+| AUC_CD14_Glu 	| Postprandial time Area Under the Curve Glucose load day: Cluster differentiation 14 	|
+| AUC_CD14_Lipids 	| Postprandial time Area Under the Curve Lipids load day: Cluster differentiation 14 	|
+| AUC_CD14_Prots 	| Postprandial time Area Under the Curve Rroteins load day: Cluster differentiation 14 	|
+| LBP_basalmean 	| Mean basal concentration:  Lipopolysaccharide binding protein  	|
+| G_LBP__0 	| Basal time Glucose load day: Lipopolysaccharide binding protein 	|
+| L_LBP_0 	| Basal time Lipid load day: Lipopolysaccharide binding protein 	|
+| P_LBP_0 	| Basal time Protein load day: Lipopolysaccharide binding protein 	|
+| AUC_LBP_Glu 	| Postprandial time Area Under the Curve Glucose load day: Lipopolysaccharide binding protein 	|
+| AUC_LBP_Lipids 	| Postprandial time Area Under the Curve Lipids load day: Lipopolysaccharide binding protein 	|
+| AUC_LBP_Prots 	| Postprandial time Area Under the Curve Proteins load day: Lipopolysaccharide binding protein 	|
+| GLP2_basalmean 	| Mean basal concentration: Glucagon-like peptide 2 	|
+| G_GLP2_0 	| Basal time Glucose load day: Glucagon-like peptide 2 	|
+| L_GLP2_0 	| Basal time Lipid load day: Glucagon-like peptide 2 	|
+| P_GLP2_0 	| Basal time Protein load day: Glucagon-like peptide 2 	|
+| AUC_GLP2_Glu 	| Postprandial time Area Under the Curve Glucose load day: Glucagon-like peptide 2 	|
+| AUC_GLP2_Lipids 	| Postprandial time Area Under the Curve Lipids load day: Glucagon-like peptide 2 	|
+| AUC_GLP2_Prots 	| Postprandial time Area Under the Curve Proteins load day: Glucagon-like peptide 2 	|
+| Zonulin_basalmean 	| Mean basal concentration: zonulin 	|
+| G_Zonulin_0 	| Basal time Glucose load day: zonulin 	|
+| L_Zonulin_0 	| Basal time Lipid load day: zonulin 	|
+| P_Zonulin_0 	| Basal time Protein load day: zonulin 	|
+| AUC_Zonulin_Glu 	| Postprandial time Area Under the Curve Glucose load day: zonulin 	|
+| AUC_Zonulin_Lipids 	| Postprandial time Area Under the Curve Lipids load day: zonulin 	|
+| AUC_Zonulin_Prots 	| Postprandial time Area Under the Curve Rroteins load day: zonulin 	|
+| Succin_basalmean 	| Mean basal concentration: Succinate* 	|
+| G_Succinate_0 	| Basal time Glucose load day: Succinate* 	|
+| L_Succinate_0 	| Basal time Lipid load day: Succinate 	|
+| P_Succinate_0 	| Basal time Protein load day: Succinate* 	|
+| AUC_Succ_Glu 	| Postprandial time Area Under the Curve Glucose load day: Succinate* 	|
+| AUC_Succ_Lipids 	| Postprandial time Area Under the Curve Lipids load day: Succinate* 	|
+| AUC_Succ_Prots 	| Postprandial time Area Under the Curve Rroteins load day: Succinate* 	|
+
+### Sanity check: Statistical description of categorical variables.
+
+
+```{r intialtables}
+(sexo<-table(IP$SEX))
+
+(sexo.obesos<-table(IP$SEX,IP$OBESE))
+
+(subgrupos<-table(IP$GROUP,IP$OBESE))
+```
+
+```{r plot1_IP, fig.align='center'}
+ggplot(data = IP,aes(x=GROUP,y=OBESE,fill=OBESE)) + geom_bar(stat = "identity",color="black",position = position_dodge())+theme_minimal()
+
+```
+
+### Univariate descriptive analysis of IP markers
+
+#### Numerical descriptive analysis
+
+Before starting with the graphical statistical analysis, we are going to perform a numerical descriptive analysis.
+
+```{r chunkIPdes}
+
+IP.variables <- IP[,3:ncol(IP)] ## remove samples names and order from the summary adn BMI variable, we have already described
+
+
+
+IP.sum<-IP.variables %>%group_by(GROUP,OBESE) %>% 
+  summarise(across(where(is.numeric),resumen),n=n()) # Group the data by variable GROUP and OBESE
+
+d.f<-as.data.frame(t(IP.sum))[c(nrow(t(IP.sum)),1:(nrow(t(IP.sum))-1)),] # transpose the data for visualization purposes and get rid off the N value for same purposes
+d.f_final <- d.f[-c(1:4),] # remove categorical variables.
+nombre_variables<- c("Mean basal value sCD14",
+                  "Basal gluclose load sCD14",
+                  "Basal lipid load sCD14",
+                  "Basal protein load sCD14",
+                  "Postprandial AUC glucose sCD14",
+                  "Postprandial AUC lipid sCD14",
+                  "Postptrandial AUC protien sCD14",
+                   "Mean basal value LBP",
+                  "Basal gluclose load LBP",
+                  "Basal lipid load LBP",
+                  "Basal protein load LBP",
+                  "Postprandial AUC glucose LBP",
+                  "Postprandial AUC lipid LBP",
+                  "Postptrandial AUC protien LBP",
+                  "Mean basal value GLP2",
+                  "Basal gluclose load GLP2",
+                  "Basal lipid load GLP2",
+                  "Basal protein load GLP2",
+                  "Postprandial AUC glucose GLP2",
+                  "Postprandial AUC lipid GLP2",
+                  "Postptrandial AUC protien GLP2",
+                   "Mean basal value zonulin",
+                  "Basal gluclose load zonulin",
+                  "Basal lipid load zonulin",
+                  "Basal protein load zonulin",
+                  "Postprandial AUC glucose zonulin",
+                  "Postprandial AUC lipid zonulin",
+                  "Postptrandial AUC protien zonulin",
+                   "Mean basal value Succinate",
+                  "Basal gluclose load Succinate",
+                  "Basal lipid load Succinate",
+                  "Basal protein load Succinate",
+                  "Postprandial AUC glucose Succinate",
+                  "Postprandial AUC lipid Succinate",
+                  "Postptrandial AUC protien Succinate")
+
+rownames(d.f_final) <-nombre_variables
+N<-as.character(d.f_final[1,])
+colnames(d.f_final) <- rep(c("Mean","SD"),6)
+## ATTENION! Because assining left hand expression is 
+## complicated, just for one table, be careful if we put another data-set
+## For showing the number of subjects by group
+kbl(d.f_final) %>%
+  kable_classic_2() %>%
+    add_header_above(c(" "=1,
+                      "9"= 2,
+                      "8"= 2,
+                      "9"= 2,
+                      "8"= 2,
+                      "10"= 2,
+                      "9"= 2
+ )) %>%
+      add_header_above(c( " "=1,
+                     "No Obese" = 2,
+                     "Obese" =2,
+                     "No Obese" = 2,
+                     "Obese" =2,
+                     "No Obese" = 2,
+                     "Obese" =2 )) %>%
+  add_header_above(c(" "=1,
+                      "Control Females" = 4, 
+                     "PCOS"=4,
+                     "Control Males"=4))
+
+
+
+```
+
+
+#### General graphical descriptive analysis of the mean values at basal stage.
+
+Like we have doing until now, firstly let's describe the distribution of the main variables: sCD14, LBP, zonulin, and succinate. We hace to take into account that succinate is more like a metabolite rather than an intenstinal permeability marker. Furhtemore, **there is the doubt** if we have to analyze this metabolite with the metabolome or with this dataset, because the units are differents.
+
+**WHAT ARE THE UNITS OF THIS DATA SET ?**
+
+
+```{r chunkIP4}
+
+variables <- colnames(IP)[7:ncol(IP)]
+hist.list.IP<-list() ## initizalize a list of the histogram
+## plot all histograms via loop
+for(i in 1:length(variables)){
+  variable <- variables[i] ## name of the variable to plot
+  titulo <- nombre_variables[i] # title of the varialbe
+  
+  breaks <- pretty(range(IP[,variable]), 
+                   n = nclass.Sturges(IP[,variable]), min.n = 1)# make pretty histogram by appropiate bins
+  bwidth <- breaks[2]-breaks[1] ## bin width
+
+  ## plot
+  hist.list.IP[[i]]<-ggplot(IP,aes_string(x=variable))+geom_histogram(aes(y=..density..),
+                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")+xlab(titulo)+ylab("")
+
+
+}
+
+
+bp.interaction <- list() ## intialize boxplot list interaction
+for(i in 1:length(variables)){
+  titulo <- nombre_variables[i]
+  variable <- variables[i]
+  bp.interaction[[i]]<-ggplot(IP,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()+ylab(titulo)
+
+}
+```
+
+
+```{r}
+do.call(grid.arrange,hist.list.IP[grep("basalmean",colnames(IP)[7:ncol(IP)])])
+```
+All mean basal values for the variables in this dataset follows a right skewed distribution, except the mean basal value of `LBP`.
+
+Now let's take a look at the main relationships between them and the BMI.
+
+```{r}
+ggpairs(
+  IP[,c(6,grep("basalmean",colnames(IP)))], lower = list(continuous = wrap(lowerFn, method = "lm")),
+  diag = list(continuous = wrap("barDiag", colour = "blue")),
+  upper = list(continuous = wrap("cor", size = 5)),
+  columnLabels = c("BMI","sCD14","LBP","GLP2","zonulin","Succinate")
+)
+```
+
+In general terms, without making groups, BMI correlates positively with all basal levels of `LBP`, `GLP2`, `zonulin` and `Succinate`. This means, while BMI augments, all levels increases except `CD14` in which the correlation is negative. All correlations are statistically significant. 
+
+Regarding, `CD14` none of the correlation is statistically significant, furthermore, barely is there any correlation. Between positive with LBP and `zonulin` and negative for `Succinate` and `GLP2`.
+
+`LBP` correlates statistical significant in a positive manner with `zonulin` and `Succinate`. Positive also, but statistically significant with `GLP2`
+
+`GLP2` with `zonulin` though the data tells us there is a positive correlation, practically this correlation does not exist. Though is statistical significant positive with `Succinate`. Furthermore `Succinate` and `zonulin` does not correlate. 
+
+
+Now, we are going to proceed to observe the different values of each variable at basal, Postprandial and between the different days.
+
+##### CD14
+
+```{r cd14}
+
+cd14_basal<-bp.interaction[1]
+p1<-bp.1.vars(IP,c("G_CD14_0","L_CD14_0","P_CD14_0"),"Basal CD14")
+p2<-bp.1.vars(IP,c("AUC_CD14_Glu","AUC_CD14_Lipids","AUC_CD14_Prots"),"Postpradial CD14")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(cd14_basal[[1]],p1,p2)
+```
+
+Postpradial levels of `CD14` are lower than basal levels of this permeability marker. Non-obese women have higher values of `CD14` at basal stage, followed by non-obese men. Obese PCOS women, have the highest values between obese subjects, but lower than healthy women, and similar values in non-obese PCOS women. Obese men and obese women, have lower levels than non-obese subjects. Postpradial levels, are lower in non-obese subjects, being lower women. Obese men at the first day have the highest values.
+
+##### LBP
+```{r}
+lbp_basal<-bp.interaction[8][[1]]
+p1<-bp.1.vars(IP,c("G_LBP__0","L_LBP_0","P_LBP_0"),"Basal LBP")
+p2<-bp.1.vars(IP,c("AUC_LBP_Glu","AUC_LBP_Lipids","AUC_LBP_Prots"),"Postpradial LBP")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(lbp_basal,p1,p2)
+```
+
+Basal levels of `LBP` are higher than Postpradial stage. The IP data tells us that the mean basal values are higher in obese subjects, but mostly on PCOS obese women. At Postpradial stage, higher values have the non.obese subjects, but with more variability in obese subjects. Obese men at the lipid load day, have the highest values at Postprandial levels. In general at Postpradial stage the levels are similar between non-obese subjects.
+
+##### GLP
+
+
+```{r glp}
+lbp_basal<-bp.interaction[15][[1]]
+p1<-bp.1.vars(IP,c("G_GLP2_0","L_GLP2_0","P_GLP2_0"),"Basal GLP2")
+p2<-bp.1.vars(IP,c("AUC_GLP2_Glu","AUC_GLP2_Lipids","AUC_GLP2_Prots"),"Postpradial GLP2")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(lbp_basal,p1,p2)
+```
+
+Again, basal levels of `GLP2` are higher than at Postpradial stage. Regarding the mean basal values, we observe that the obese PCOS and men have higher values. Control females, both obese and non-obese have similar distribution of values. While healthy males and PCOS obese women have similar values. If we see the data at the different days, on non-obese PCOS women, these patients have the lower values.
+
+At Postpradial time, in general, across subjects, the valuesof `GLP2` increases at the lipid and protein levels progressively. With similar values between subjects on non-obese persons. Obese PCOS women, show lower values of `GLP2`.
+
+
+
+##### zonulin
+
+
+```{r zonulin}
+lbp_basal<-bp.interaction[22][[1]]
+p1<-bp.1.vars(IP,c("G_Zonulin_0","L_Zonulin_0","P_Zonulin_0"),"Basal Zonulin")
+p2<-bp.1.vars(IP,c("AUC_Zonulin_Glu","AUC_Zonulin_Lipids","AUC_Zonulin_Prots"),"Postpradial Zonulin")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(lbp_basal,p1,p2)
+```
+
+
+Basal levels of `zonulin` are higher than Postpradial levels. The mean basal levels are higher in obese subjects, but higher in obese women with PCOS. This values are higher at basal levels on the glucose load day. Similar values at Postpradial time or non-obese subjects is observed. Meanwhile on obese subjects these values increases. At glucose load day, the higher levels are in obese men. Next day and, in overall, obese control females have the highest concentration of `zonulin`, meanwhile the last day again, obese men have the higher value.
+
+##### Succinate.
+
+```{r succinate}
+lbp_basal<-bp.interaction[29][[1]]
+p1<-bp.1.vars(IP,c("G_Succinate_0","L_Succinate_0","P_Succinate_0"),"Basal Succinate" )
+p2<-bp.1.vars(IP,c("AUC_Succ_Glu","AUC_Succ_Lipids","AUC_Succ_Prots"),"Postpradial Succinate")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
+grid.arrange(lbp_basal,p1,p2)
+```
+Basal concentration levels of `succinate` are higher than Postprandial levels. This levels are higher in obese subjects, particularly on PCOS women. At Postpradial time, non-obese males, have higher values, being this concentration higher on the first day. On obese subjects, also, the higher values are at the first day, with PCOS obese females with higher concentration, even in comparison with non-obese subjects. 
+
+
 
 
 

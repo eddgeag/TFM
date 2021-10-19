@@ -29,7 +29,148 @@ opts_chunk$set(comment = NA, prompt = TRUE, tidy = T,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-## Prepare libraries.
+# Summary of the univariate descrpitve analysis.
+
+## Overall study.
+
+The data comprises 53 subjects, which are divided into 34 females and 19 males. From the 34 females, 18 are non obese and 16 obese. And 10 non obese males and 9 obese males. The 18 non obese females are divided into 9 PCOS and 9 healthy. The 16 obese females are divided further into 8 PCOS and 8 non PCOS.
+
+A sanity check of the study was performed to observed possibly differences between the groups. No differences were found.
+Descriptive numerical tables were performed on each data-set except on the microbiome. Numerical descriptive tables only contain the mean and the standard deviation.
+
+For each numerical variable (all except the ones that describes the groups) their distribution were analyzed as a whole, without taking into account the groups (obese, sex and PCOS).
+
+It has to be mentioned that no correlation between variables on the different data types were performed. Only uni variate statistical analysis on each data set was performed.
+
+Permeability markers, and some clinical biomarkers, were analyzed at basal and postprandial times. The first day of the study corresponds to the glucose oral load, the second to the lipids and the third to the proteins.
+
+1. **Clinical data: ** Comprises 63 variables.  The first variable is the order of the data, the second variable is the sample name, and the next 5 variables belong to sex, group (female, male, PCOS), obese (whether obese or not obese), age and BMI, WC, WHR. And 54 biomarkers. From those 54 biomarkers, there are testosterone, estradiol, its ratio, HOMA-IR, ISI, cholesterol, HDL , LDL, insulin and glucose. Sex steroids, the ratio, HOMA-IR and ISI are only  calculated at basal levels. The other variables are calculated also at postprandial level. Furthemore the levels of all these variables the mean basal value for each day of the study is computed.
+
+2. **Permability Biomarkers:** Apart from the categorical variables, we have sCD14, LBP, zonulin and succinate. Each variable the mean basal value is computed,as well as the basal values for each day and the postprandial stage. Succinate is more like a metabolite, however, it was calculated in other units, and we do not know how to include this metablolite. ( No units are specified on this data set)
+
+3. **Metabolome:** The data includes only the sample and the order. And 261 variables. From these variables, only 37 were actually metabolites. The other variables belong to the mean basal values, the basal values for each day, and the postprandial values for each day.
+
+4.**Microbiome.** Here, we have two sets of data. Reads from the several phylum and the genus. Only 5 subjects could not be able to analyze their faces. We performed a sanity check of the data to observe if this variation in the data affected the study. It did not.
+
+### Clinical data
+
+Body shape variables, like BMI, waist circumference, and waist to hip ratio show bimodal distributions, indicating the differences between obese and non-obese subjects. Age also show a bimodal distribution, indicating two different groups (<25 and >25). No differences in this variables were found regarding PCOS subjects. Boxplots accounting for the interaction were performed.
+
+Due to the huge amount of variables, and the fact that with a simple correlation matrix, the interactions could not be seen, we search in the literature for possible correlation between the variables that we have.
+In general terms, the SHBG, as a whole, interact with the sex steroids (testosterone and estradiol). The free concentration of the steroids decreases as SHBG increases, this hold for testosterone in general. Estradiol show different correlation between groups, with no interaction with SHBG except on males and obese PCOS women with a negative correlation. Positive correlation is observed in obese females controls. The ratio between the two steroids shows no correlation with SHBG in healthy control women. Positive correlation is observed between males. Obese females and PCOS lean patients show negative correlations. Obese PCOS women show positive correlation.
+
+As expected, and in corcodance with the literature, SHBG increases with age. Regarding the correlation with BMI, on healthy control women this correlation is negative, as well as on obese PCOS and obese males. The other subjects show a positive correlation. Similar pattern is observed on WC and WHR.
+
+For the variables hsCRP (C-reactive Protein), HOMA-IR , insulin sensitivity index (ISI) and lipids, similar procedure was adress. Regarding HOMA-IR and ISI, due to the fact that both variables indicate us the resistance of the insulin, only HOMA-IR was correlated with the other variables. (HOMA-IR and ISI are inverse of each other in general terms).
+HsCRP, is higher on obese subjects, but this interaction is only observed on PCOS women as well as fasting concentration of insulin. Fasting glucose was higher between obese females and control females, but no differences were found among the other subjects. HOMA-iR show higher levels on obese subjects, but more specifically on obese PCOS women. 
+
+Triglicerids were higher on obese subjects, being higher on males and PCOS women. Similar pattern was found on cholesterol levels and LDL cholesterol. Opposite pattern was observed on HDL cholesterol.
+
+Regarding the literature, a scatter plot matrix was performed on the basal insulin, glucose, ISI and HOMA-IR variables. As expected, the patterns described in the literature, were found on the data.
+
+
+A positive correlation between insulin, glucose and HOMA-IR levels was found. A negative correlation was found regarding ISI.
+A correlation plot was performed, and according to the literature, the correlations between HDL levels and BMI, hsCRP, HOMA-IR, and triglycerides (TG) were negative. The other variables show a positive correlation. Differences were found when the correlation was performed between groups. 
+
+Regarding hsCRP and BMI, only on obese males this correlation was negative. HsCRP and HOMA-IR, no relationship exists between healthy control women, obese women and obese PCOS women. A negative correlation is found in non-obese PCOS women and a positive correlation is observed between men.
+
+HsCRP and TG, show nagative correlation for women, except on obese PCOS women and males. HsCRP and cholesterol the correlation is negative in women and positive in males.
+
+HDL cholesterol and hsCRP show positve correlation between non-obese PCOS females and obese control females. A negative correlation is observed on the other subjects. 
+LDL cholesterol and hscRP correlation is negative on females and positive on males.
+
+
+**Postprandial levels**
+
+Insulin postprandial levels are higher than basal levels on the first day. Being higher on PCOS women. The protein load day, show similar values at basal time, but on the second day, values were lower. 
+Obese PCOS subjects present a higher concentration of glucose ath the first day. But all subjects present lower values than at the basal stage, but still lower.
+
+Triglycerides show higher values on the lipid load day, with no distinction between groups. Still lower values than at the basal time. 
+On the contrary levels of cholesterol were lower at postprandial levels, but higher in obese PCOS women. Same pattern was observed on LDL cholesterol. And similar pattern but without distinction between groups were observed in HDL cholesterol
+
+
+### Intestinal permeability markers. 
+
+As mentioned above, this data set comprises of four permeability markers and one metabolite. As we did on the clinical biomarkers, firstly we did a quick review of the literature.
+
+CD14 (Cluster differentiation 14), is a protein that detects bacteria in the body by binding a lipopolysacharide *This should be interesting when integrating the data sets*. Also this binding its only possible with the *Lipopolysacharide-binding-protein LBP*. Also recognize other pathogen associated molecular patterns. LBP is important to cell surface pattern recongition such as CD14 and TLR4 (mentioned on the references).
+
+GLP2 (Glucagon-like peptide2) decreases cytokine expression, and is part of the inflammatory response.
+Is reported than Zonulin increases in patients with diabetes mellitus II. 
+
+On the other hand, succinate, as mentioned, is a metabolite, involved in many pathways, activates the inflammatory response trough toll like receptors (mentioned on the main references).
+
+A correlation-scatter matrix plot was performed to observe the relationships among the mean basal values of the variables, BMI included, as is an indicator of diabetes II and inflammation.
+
+BMI, correlates positively with all variables, except on sCD14. 
+SCD14, correlates in a positve manner with LBP and Zonulin, as described in the literature, and negatively with GLP2 and succinate. 
+
+The correlation of LBP with GLP2, zonulin and succinate is positive. 
+There is no relationship between GLP2 and zonulin, but a positive correlation exist between succinate. Finally succinate and zonulin present a barely positive correlation.
+
+
+**Comparison between basal and postpranidal levels.**
+
+All variables on this data set, show higher values at basal level than at postprandial time
+SCD14,  at basal levels is higher on non-obese subjects. Specially on healthy control women. No distinction between the other groups is found regarding non-obese subjects. Obese PCOS women show increased levels of this IP, but lower than healthy control women. At postprandial levels, similar values are found across all subjects. But on the second and third day, on non-obese subjects males and PCOS women show higher values. Obese males at the first day show the highest values at postprandial levels.
+
+LBP mean basal values are higher on obese subjects, specifically on PCOS obese women. And no distinction between groups are observed at postprandial levels, GLP values are higher at basal levels on obese PCOS women and obese males. Between control women no distinction is observed. At postprandial levels,  higher values are observed on the second and third day. With no distinction between non-obese subjects. Obese control subjects show higher values than obese PCOS women.
+
+Zonullin mean basal levels show no distinction between groups. At postprandial levels, on the second day, between obese obese subjects, control females have the highest values followed by PCOS and males.
+
+Succinate levels are higher on obese subjects, but remarkably higher on obese women with PCOS. At postprandial time, the first day, levels of this metabolite are higher. Being higher on non obese males and obese PCOS women. On the other days no distinction is found between groups
+
+### Metabolome
+
+This data set was analyzed in a different way. Instead of referring at the literature, because, each metabolite is associate with many pathways, and the fact that most of them are aminoacids, we performed a correlation matrix plot. From this plot, we infer that the correlations, whether positive or negative, may be due to the physical/chemical properties. 
+
+For instance, Oxoisocaproic, Leucine, Isoleucine and Valine are positive correlated. These metabolites have in common that the Oxoisocaproic acid, is derived from the leucine, isoleucine, and valine. And leucine, isoleucine and valine are non-polar.
+
+Normal and non-normal, i.e skewed distributions were found across all mean basal values of metabolites.
+For each metabolite, descriptive analysis of box plot was performed. In general postprandial levels of each metabolite were lower than basal values.
+
+### Microbiome
+
+Gut microbiome was extracted and analyzed via faces of the subjects. We have the reads of the phylum and the genus of the microbiome. They analyzed 282 OTUs ( operational taxonomic units) 69 of which they were not capable of identify at genus level also at phylum data. Both unknown genus and phylum coded as ud- were discarded for the analysis. Furthermore, there were reads on both phylum and genus were the reads across all samples were zero. Those were also excluded from the analysis.
+The analysis was performed via the `phyloseq` package from bioconductor. Both data-sets were processed to obtain a `phyloseq` object. 
+
+From the phylum data, one can observe (not all) the most abundant bacteria, for example:  abundance of Firmicutes is similar between obese and non-obese subjects. On obese males this abundance is higher, as well as on obese PCOS women. Less abundance is observed on obese control females. Bacteroidetes are the following phylum with higher abundance. Being higher on
+non-obese subjects. After that, the following phylum observed is Actinobacteria, with similar abundance on obese and non-obese subjects. Proteobacteria is higher on obese subjects.
+
+On the other hand, regarding the genus, it cannot be observed due to the high types of genera. But in general, bacteria with less abundance is observed on obese control females, followed by healthy control females. PCOS women and males have similar abundance. Being higher on PCOS women.
+
+
+
+
+# Questions to adress:
+
+1. I think, it should be wise to obtain from the literature the normal values by sex of the several variables, specially for the clinical ones. But I think this is too much.
+
+2. The three times measured, for instance, 0-60-120 minutes,  are not recorded on the data. O belongs to basal levels, and 60-120 to postprandial levels. However, on the permeability markers, only two times were measured, but this is not reflected on the data.
+
+3. What are we doing to do with succinate ?
+
+4. On this analysis there are not references. I am aware of that.
+
+5. It should be wise to compute the mean values at postprandial levels ? However, each day describe how the variable behaves, for this reason I did not do do it.
+
+6. It is compulsory to address the data in a multivariate way. I think I lost a lot of information. Specially on metabolites and the microbiome.
+
+7. Also, it is compulsory to address correlation between data types. But for this analysis I did not do it.
+
+8. I need a little help to address the microbiome dataset. An effort has been made to merged both phylum and genus. However, this merge process is not well done. Because, phylum is paired likewise with the genus. Therefore, one genus belongs to one phylum. And this is not coherent. Furthermore, in order to perform tree analysis, it is needed the sequences.
+Help is required, in order to perform a proper descriptive analysis on gut microbiome data. 
+Is `phyloseq` adequate ? And for further analysis, both phylum and genus must be correlated or associated. 
+Question: beta diversity and alpha diversity, refers to genus and phylum ? 
+
+9. Regarding the microbiome, for further analysis, the data, which are raw reads, must be transformed and normalized. Any suggestion ?
+
+
+
+
+
+
+# Prepare libraries.
 
 In order to have a reproducible research, the following chunk, install the packages if they are not installed and then are loaded into the session.
 
@@ -43,6 +184,13 @@ if(any(res==F)){
   list.of.packages[which(res==F)]  ## show those package if you have troubles to install.
 }
 
+list.of.bioc.packages <- c("phyloseq")
+new.packages.bioc <- list.of.packages[!(list.of.bioc.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages.bioc)) BiocManager::install(new.packages.bioc)
+res.bioc <- unlist(lapply(list.of.bioc.packages, require,character.only = T)) 
+if(any(res.bioc==F)){
+  list.of.packages[which(res.bioc==F)]  ## show those package if you have troubles to install.
+}
 ```
 
 
@@ -806,7 +954,7 @@ For each intestinal permeability marker, it is measured at basal stage and mean,
 ### Sanity check: Statistical description of categorical variables.
 
 
-```{r intialtables}
+```{r intialtables2}
 (sexo<-table(IP$SEX))
 
 (sexo.obesos<-table(IP$SEX,IP$OBESE))
@@ -1036,8 +1184,8 @@ Basal concentration levels of `succinate` are higher than Postprandial levels. T
 ## Description of the metabolites.
 
 
-Read the file of the metabolome. The data as the other datasets, are in excel format. Furthermore, sheet 2 , gives information about the encoding of the metabolites. There is a row of `NA` because of the importe, so we remove that row. Then this dataset, the sample names have a differet name than the Intestinal Permeability, and Clinical variables data-sets. 
-```{r IPmarkerssData}
+Read the file of the metabolome. The data as the other datasets, are in excel format. Furthermore, sheet 2 , gives information about the encoding of the metabolites. There is a row of `NA` because of the import, so we remove that row. Then this dataset, the sample names have a different name than the Intestinal Permeability, and Clinical variables data-sets. 
+```{r metabolintessData}
 metabolome_file<-file.path(params$folder.data,file=params$file_metabolome) ## file path of the data
 metabolome.tmp<-read.xlsx(metabolome_file,sheetIndex = 1) # read the data
 metabolites_name <- read.xlsx(metabolome_file,sheetIndex = 2)$Metabolitos # read the names of the metabolites
@@ -1048,7 +1196,7 @@ metabolome$OBESE <- general_data$OBESE ## add OBESE variables.
 ```
 
 Observe the structure of the data
-```{r chunkip1}
+```{r chunkipmeta}
 str(metabolome) # show general description of the data
 ```
 
@@ -1464,7 +1612,7 @@ At postprandial levels, these are lower than basal levels. However ob obese subj
 
 
 ```{r}
-meta<-grep("pyroglu`",ignore.case = T,colnames(metabolome))
+meta<-grep("pyroglu",ignore.case = T,colnames(metabolome))
 meta.mean<-meta[1]
 meta.plts<-meta[-1]
 ###plots
@@ -1870,22 +2018,22 @@ Postprandial levels are comparable with basal levels. Being lower on the first a
 
 
 
-Gut microbiome was extracted and analyzed via faces ob the subjects. On this dataset only on five subjects they  were not able to analyze their faces. Furthermore, samples were re-coded, but with the same meaning. They analyze the phylum and the genera. We have the reads of the phylum and the genera of the microbiome. They analyzed 282 OTUs ( operational taxonomic units) 69of which they were not capable of identify at genera level. Thus genera we are going to exclude from the analysis
+Gut microbiome was extracted and analyzed via faces of the subjects. On this dataset only on five subjects they  were not able to analyze their faces. Furthermore, samples were re-coded, but with the same meaning. They analyze the phylum and the genera. We have the reads of the phylum and the genera of the microbiome. They analyzed 282 OTUs ( operational taxonomic units) 69of which they were not capable of identify at genera level. These genus we are going to exclude from the analysis
 
 First of all, let's inspect if the study is compromised by these subjects. We are going to perform chisq-test to observe if there are differences between groups.
 ```{r}
 bacteria_file <- file.path(params$folder.data,params$file_microbiota)
-
-bacteria_phylum.tmp <- read.xlsx(bacteria_file,sheetIndex = 1)
-
+bacteria_phylum.tmp <- (read.xlsx(bacteria_file,sheetIndex = 1))
+bacteria_genera.tmp <- read.xlsx(bacteria_file,sheetIndex = 3)
 str(bacteria_phylum.tmp)
 ```
 
-Let's idenitfy at which group belong each sample
+### Process phylum data and sanity check.
+First of all let's process the phylum data. To do that, we need to find out which variables belong to each group. (OBESE and GROUP) Furthermore we have to transpose the data
+
 ```{r}
-variables_categoricas<-general_data[,1:5] ## keep categorical variables
 ## which samples are in bacteria
-variables_in_bacteria <- variables_categoricas[variables_categoricas$Orden %in% bacteria_phylum.tmp$Order,] 
+variables_in_bacteria <- general_data[general_data$Orden %in% bacteria_phylum.tmp$Order,] 
 ## add categorical variables.
 bacteria_phylum.tmp$SEX <- variables_in_bacteria$SEX
 bacteria_phylum.tmp$GROUP <- variables_in_bacteria$GROUP
@@ -1909,57 +2057,123 @@ chisq.test(sexo.obesos)
 chisq.test(subgrupos)
 ```
 
-There are no differences between groups, thus we can continue our exploratory analysis without concern. After the sanity check analysis, previously we have observed from the `str` function, that tells us the general structure of the data, that some variables are all 0. Thus we are going to remove those variables, and the unkown general.
+There are no differences between groups, thus we can continue our exploratory analysis without concern. After the sanity check analysis, previously we have observed from the `str` function, that tells us the general structure of the data, that some variables are all 0. Thus we are going to remove those variables, and the unknown general.
 
 ```{r}
-zero_variables<-apply(bacteria_phylum.tmp, 2,function(x) all(x==0))
-unkown_variables<-grep("ud",colnames(bacteria_phylum.tmp))
-bacteria_phylum<-bacteria_phylum.tmp[,-c(zero_variables,unkown_variables)]
+zero_variables<-apply(bacteria_phylum.tmp, 2,function(x) all(x==0)) ## which phylum have zero reads
+unkown_variables<-grep("ud",colnames(bacteria_phylum.tmp))## which phylum is unkwoun
+bacteria_phylum.tmp2<-bacteria_phylum.tmp[,-c(zero_variables,unkown_variables)] ## remove unkowns and zero reads
+rownames(bacteria_phylum.tmp2)<-bacteria_phylum.tmp2[,1]
+bacteria_phylum<-bacteria_phylum.tmp2[,-1]
+dim(bacteria_phylum)
+```
+
+At the end we have 46 observations and 24 phylum
+Once we have processed phylum data, we are going to process genera data. 
+
+### Process genera data.
+
+```{r}
+str(bacteria_genera.tmp)
+```
+
+On this dataset, the matrix is transposed, thus we are going to transpose again. Furthermore, we need to add rownames and colnames and add `GROUP` and `OBESE` variables. 
+
+
+```{r}
+bacteria_genera.tmp.t<-as.data.frame(t(bacteria_genera.tmp)) ## transpose data
+my_orden <- gsub("X","",rownames(bacteria_genera.tmp.t)) ## ridoff X character from order
+colnames(bacteria_genera.tmp.t)<-bacteria_genera.tmp.t[1,] ## name columns
+bacteria_genera.tmp2<-bacteria_genera.tmp.t[-1,] # remove column as a observation
+bacteria_genera.tmp2$Orden <- my_orden[-1] # add order variable without "sample" character
+rownames(bacteria_genera.tmp2)<-bacteria_genera.tmp2[,1] ## add samples as rows
+bacteria_genera.tmp3<-bacteria_genera.tmp2[,-1] ## remove samples as variable
+## which samples are in the new dataset
+variables_in_bacteria <- general_data[general_data$Orden %in% bacteria_genera.tmp3$Orden,] 
+bacteria_genera.tmp3$GROUP<-variables_in_bacteria$GROUP ## add GROUP variable
+bacteria_genera.tmp3$OBESE <- variables_in_bacteria$OBESE ## add OBESE variable
+zero_variables<-apply(bacteria_genera.tmp3, 2,function(x) all(x==0)) ## which genera have zero reads
+unkown_variables<-grep("ud-",colnames(bacteria_genera.tmp3)) ## which are unkown genera
+bacteria_genera<-bacteria_genera.tmp3[,-c(zero_variables,unkown_variables)] ## remove zeros and unkown variables.
+bacteria_genera[,1:213]<-apply(bacteria_genera[,1:213],2,as.numeric)
+```
+At the end we have 46 samples and 216 genera.
+
+
+### Descriptive analysis of the gut microbiome.
+
+we have to mention that, in order to analyze the data, one has to transform and normalize the data. Here were are explaining the data with the raw reads.
+
+
+In order to plot and make posterior analysis, we have to construct a `phyloseq` object from the phylium(1) and the genera(2)
+
+#### Creating phyloseq object for phylum data
+
+```{r phylum}
+## Creating Otu table
+otumat_phylum<-t(bacteria_phylum[,c(1:20)])
+rownames(otumat_phylum)<-paste0("OTU",1:nrow(otumat_phylum))
+OTU_phylum<-otu_table(otumat_phylum,taxa_are_rows = T)
+## Creating taxa table
+taxmat_phylum<-data.frame(colnames(bacteria_phylum[,c(1:20)]))
+TAX_phylum<-tax_table(taxmat_phylum)
+taxa_names(TAX_phylum)<-paste0("OTU",1:nrow(otumat_phylum))
+colnames(TAX_phylum)<-"Phylum"
+### Creating sample table
+samples<-as.data.frame(rownames(bacteria_phylum))
+samples$GROUP<-variables_in_bacteria$GROUP
+samples$OBESE <- variables_in_bacteria$OBESE
+rownames(samples)<-rownames(bacteria_phylum)
+samples.phylum <- samples[,-1]
+SAM.tmp <- sample_data(samples)
+SAM<-SAM.tmp[,-1]
+### Creating phyloseq object for phylum data
+physeq_phylum <- phyloseq(OTU_phylum,TAX_phylum,SAM)
+```
+
+#### Creating phyloseq object for genera data.
+
+
+```{r genera}
+## Creating Otu table
+otumat_genera<-(t(bacteria_genera[,c(1:213)]))
+rownames(otumat_genera)<-paste0("OTU",1:nrow(otumat_genera))
+OTU_genera<-otu_table(otumat_genera,taxa_are_rows = T)
+## Creating taxa table
+taxmat_genera<-data.frame(colnames(bacteria_genera[,c(1:213)]))
+TAX_genera<-tax_table(taxmat_genera)
+taxa_names(TAX_genera)<-paste0("OTU",1:nrow(otumat_genera))
+colnames(TAX_genera)<-"Genera"
+### Creating sample table
+samples<-as.data.frame(rownames(bacteria_genera))
+samples$GROUP<-variables_in_bacteria$GROUP
+samples$OBESE <- variables_in_bacteria$OBESE
+rownames(samples)<-rownames(bacteria_genera)
+samples.phylum <- samples[,-1]
+SAM.tmp <- sample_data(samples)
+SAM<-SAM.tmp[,-1]
+### Creating phyloseq object for phylum data
+physeq_genera<- phyloseq(OTU_genera,TAX_genera,SAM)
+```
+
+### Plot phylum
+
+```{r plotphylum}
+
+plot_bar(physeq_phylum , x="Phylum", fill="GROUP",facet_grid = ~OBESE)
 
 ```
 
-Now let's observe the distribution of the data. 
-
-```{r}
-variables <- colnames(bacteria_phylum)
-hist.list<-list() ## initizalize a list of the histogram
-## plot all histograms via loop
-for(i in 1:length(variables)){
-  if(variables[i]=="Order"||variables[i]=="Sample"){
-    next
-  }else if(class(bacteria_phylum[,i])=="factor"){
-    next
-  }
-  variable <- variables[i] ## name of the variable to plot
-  titulo <- colnames(bacteria_phylum)[i] # title of the varialbe
-  
-  breaks <- pretty(range(bacteria_phylum[,variable]), 
-                   n = nclass.Sturges(bacteria_phylum[,variable]), min.n = 1)# make pretty histogram by appropiate bins
-  bwidth <- breaks[2]-breaks[1] ## bin width
-
-  ## plot
-  hist.list[[i]]<-ggplot(bacteria_phylum,aes_string(x=variable))+geom_histogram(aes(y=..density..),
-                                                        binwidth =bwidth,colour="black")+geom_density(alpha=.2, fill="lightblue")+xlab(titulo)+ylab("")
-
-
-}
-
-
-bp.interaction <- list() ## intialize boxplot list interaction
-GROUP<-"GROUP"
-for(i in 1:length(variables)){
-  titulo <- colnames(bacteria_phylum)[i]
-  variable <- variables[i]
-  bp.interaction[[i]]<-ggplot(bacteria_phylum,aes_string(x=GROUP,y=variable,interaction(GROUP),fill=OBESE))+geom_boxplot()+ylab(titulo)
-
-}
+From the phylum data, we observe similar abundance of Firmicutes between obese and non-obese subjects. On obese males this abundance is higher, as well as on obese PCOS women. Less abundance is observed on obese control females. Bacteroidetes are the following phylum with higher abundance. Being higher on non-obese subjects. After that, the following phylum observed is Actinobacteria, with similar abundance on obese and non-obese subjects. Proteobacteria is higher on obese subjects.
+### Plot Genera
+```{r plotgenera}
+plot_bar(physeq_genera,x=OBESE,facet_grid = ~GROUP)
 ```
 
+Regarding genus,it cannot be observed due to the high types of genera. But in general, bacteria with less abundance is observed on obese control females, followed by healthy control females. PCOS women and males have similar abundance. Being higher on PCOS women.
+
 ```{r}
-do.call(grid.arrange,hist.list[2:7])
-do.call(grid.arrange,hist.list[8:13])
-do.call(grid.arrange,hist.list[14:19])
-do.call(grid.arrange,hist.list[20:21])
+merged_physoeq<-merge_phyloseq(physeq_genera,physeq_phylum)
 ```
 
 

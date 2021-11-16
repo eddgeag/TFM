@@ -8,6 +8,9 @@ output:
   prettydoc::html_pretty:
     theme: cayman
     highlight: github
+  html_document:
+    toc: true
+    toc_depth: 2
 header-includes:
   - \usepackage[english]{babel}
 params:
@@ -327,7 +330,7 @@ In order to do so, firstly we define a function called `resumen` that computes t
 ```{r}
 general_data.variables <- general_data[,3:ncol(general_data)] ## remove samples names and order from the summary
 
-resumen<-function(x){c(round(mean(x),2),round(sd(x),2))} # Function that help us to summarize the data in mean and sd values
+resumen<-function(x){c(round(mean(x),4),round(sd(x),4))} # Function that help us to summarize the data in mean and sd values
 
 
 general_data.sum<-general_data.variables %>%group_by(GROUP,OBESE) %>% 
@@ -394,21 +397,24 @@ nombre_variables<- c("Age (years)",
                          "LDL AUC: Lipid day (mg/dL)",
                          "LDL AUC: Protein day (mg/dL)")
 
+variable_code <- colnames(general_data)[6:ncol(general_data)]
 rownames(d.f_final) <-nombre_variables
 N<-as.character(d.f_final[1,])
 colnames(d.f_final) <- rep(c("Mean","SD"),6)
 ## ATTENION! Because assining left hand expression is 
 ## complicated, just for one table, be careful if we put another data-set
 ## For showing the number of subjects by group
+d.f_final$Code <- variable_code
 kbl(d.f_final) %>%
-  kable_classic_2() %>%
+  kable_classic() %>%
     add_header_above(c(" "=1,
                       "9"= 2,
                       "8"= 2,
                       "9"= 2,
                       "8"= 2,
                       "10"= 2,
-                      "9"= 2
+                      "9"= 2,
+                      " "=1
  )) %>%
       add_header_above(c( " "=1,
                      "No Obese" = 2,
@@ -416,11 +422,13 @@ kbl(d.f_final) %>%
                      "No Obese" = 2,
                      "Obese" =2,
                      "No Obese" = 2,
-                     "Obese" =2 )) %>%
+                     "Obese" =2 ,
+                     " "=1)) %>%
   add_header_above(c(" "=1,
                       "Control Females" = 4, 
                      "PCOS"=4,
-                     "Control Males"=4))
+                     "Control Males"=4,
+                     " "=1))
 
 
 ```
@@ -1019,7 +1027,8 @@ nombre_variables<- c("Mean basal value sCD14",
                   "Postprandial AUC glucose Succinate",
                   "Postprandial AUC lipid Succinate",
                   "Postptrandial AUC protien Succinate")
-
+code_variables <- colnames(IP)[7:ncol(IP)]
+d.f_final$Coda <- code_variables
 rownames(d.f_final) <-nombre_variables
 N<-as.character(d.f_final[1,])
 colnames(d.f_final) <- rep(c("Mean","SD"),6)
@@ -1034,7 +1043,8 @@ kbl(d.f_final) %>%
                       "9"= 2,
                       "8"= 2,
                       "10"= 2,
-                      "9"= 2
+                      "9"= 2,
+                      " "=1
  )) %>%
       add_header_above(c( " "=1,
                      "No Obese" = 2,
@@ -1042,11 +1052,13 @@ kbl(d.f_final) %>%
                      "No Obese" = 2,
                      "Obese" =2,
                      "No Obese" = 2,
-                     "Obese" =2 )) %>%
+                     "Obese" =2, 
+                     " "=1)) %>%
   add_header_above(c(" "=1,
                       "Control Females" = 4, 
                      "PCOS"=4,
-                     "Control Males"=4))
+                     "Control Males"=4,
+                     " "=1))
 
 
 
@@ -1207,7 +1219,7 @@ metabolome.variables <- metabolome[,3:ncol(metabolome)] ## remove samples names 
 
 
 metabolome.sum<-metabolome.variables %>%group_by(GROUP,OBESE) %>% 
-  summarise(across(where(is.numeric),resumen),n=n()) # Group the data by variable GROUP and OBESE
+  summarise(across(where(is.numeric),resumen),n=n()) %>%mutate_if(is.numeric, format, 4) # Group the data by variable GROUP and OBESE
 
 d.f<-as.data.frame(t(metabolome.sum))[c(nrow(t(metabolome.sum)),1:(nrow(t(metabolome.sum))-1)),] # transpose the data for visualization purposes and get rid off the N value for same purposes
 d.f_final <- d.f[-c(1:3),] # remove categorical variables.
@@ -1239,7 +1251,8 @@ colnames(d.f_final)[13] <- "variable Code"
 ## ATTENION! Because assining left hand expression is 
 ## complicated, just for one table, be careful if we put another data-set
 ## For showing the number of subjects by group
-kbl(d.f_final) %>%
+as.data.frame(d.f_final)
+kbl(d.f_final,digits=c(rep(4,12),0)) %>%
   kable_classic_2() %>%
     add_header_above(c(" "=1,
                       "9"= 2,
@@ -1262,7 +1275,7 @@ kbl(d.f_final) %>%
                       "Control Females" = 4, 
                      "PCOS"=4,
                      "Control Males"=4,
-                     " "=1))
+                     " "=1)) 
 
 
 ```

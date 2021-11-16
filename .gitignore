@@ -2,4 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-Analysis_cache
+./Analysis_cache
+./AnalysisClinicalData_cache
+./AnalysisIP_cache
+./AnalysisMetabolome_cache
+./AnalysisMicrobiome_cache
+

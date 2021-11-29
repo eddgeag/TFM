@@ -1102,8 +1102,8 @@ list.pcxt <- list(scores=pcxt$rot,loadings=pcxt$x,var=100*pcxt$sdev^2/sum(pcxt$s
 ```
 
 ```{r}
-graficos <- plotPCA_methods(list.pcxt,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X))
-graficos
+graficos <- plotPCA_methods(list.pcxt,factor = grupos,title1=" PCA classical scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X),size=3)
+grid.arrange(graficos[[1]],graficos[[2]])
 # graficos[[2]]
 ```
 
@@ -1118,9 +1118,9 @@ list.nipals_1 <-list(scores=pcx.nipals$T,loadings=pcx.nipals$P,varianza=pcx.nipa
 
 
 ```{r}
-graficos <- plotPCA_methods(list.nipals_1,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X))
-graficos[[1]]
-graficos[[2]]
+graficos <- plotPCA_methods(list.nipals_1,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X),size=3)
+grid.arrange(graficos[[1]],graficos[[2]])
+
 ```
 
 
@@ -1134,7 +1134,7 @@ perf <- function(X,X.pred){
   
 }
 
-spca.perf <- function(X,fix_parameter,transpose){
+spca.perf <- function(X,fix_parameter,transpose,scale.){
   
   parameter <-  seq(1e-10,1,0.01)
   perf.vector <- vector(mode="numeric",length=length(parameter))
@@ -1145,20 +1145,20 @@ spca.perf <- function(X,fix_parameter,transpose){
   if(transpose==F){
     
     for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],center=T,scale=T,verbose = F,k=ncol(X))$loadings))
+       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
   
     }
     beta <- beta[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=T,k=ncol(X))
+    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
     
   }else if(transpose==T){
     
         for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,center=T,scale=T,k=ncol(X))$scores))
+       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,center=T,scale=scale.,k=ncol(X))$scores))
   
     }
     beta <- beta[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,center=T,scale=T,k=ncol(X))
+    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
   }
     
   }else if(fix_parameter=="beta"){
@@ -1168,20 +1168,20 @@ spca.perf <- function(X,fix_parameter,transpose){
       if(transpose==F){
     
     for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,center=T,scale=T,verbose = F,k=ncol(X))$loadings))
+       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
   
     }
     alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=T,k=ncol(X))
+    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
   }else if(transpose==T){
     
         for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],center=T,scale=T,beta=beta,verbose = F,k=ncol(X))$scores))
+       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],center=T,scale=scale.,beta=beta,verbose = F,k=ncol(X))$scores))
   
     }
 
     alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,center=T,scale=T,verbose=F,k=ncol(X))    
+    pcx<- spca(t(X),alpha=alpha,beta=beta,center=T,scale=scale.,verbose=F,k=ncol(X))    
   }
     
   
@@ -1192,35 +1192,34 @@ spca.perf <- function(X,fix_parameter,transpose){
 
 ```
 
-
 ```{r}
 # pcx.a <- spca.perf(X,"beta",transpose = F)
 # pcx.a.t <- spca.perf(X,"beta",transpose=T)
-pcx.b <- spca.perf(X,"alpha",transpose = F)
-pcx.b.t <- spca.perf(X,"alpha",transpose=T)
+# pcx.b <- spca.perf(X,"alpha",transpose = F,scale. = T)
+# pcx.b.t <- spca.perf(X,"alpha",transpose=T,scale. = T)
 ```
 
 
 ```{r}
-lista.spca.b <- list(loadings=(pcx.b$loadings),scores = t(pcx.b$scores),
-                     var=100*round(pcx.b$eigenvalues/sum(pcx.b$eigenvalues),2))
-lista.spca.b.t <- list(loadings=(pcx.b.t$scores),scores = pcx.b.t$loadings,
-                     var=100*round(pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues),2))
+# lista.spca.b <- list(loadings=(pcx.b$loadings),scores = t(pcx.b$scores),
+#                      var=100*round(pcx.b$eigenvalues/sum(pcx.b$eigenvalues),2))
+# lista.spca.b.t <- list(loadings=(pcx.b.t$scores),scores = pcx.b.t$loadings,
+#                      var=100*round(pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues),2))
 
 ```
 
 
 ```{r}
-g1<-plotPCA_methods(lista.spca.b,grupos,title1="beta scores sparse",title2 = "beta loads sparse",
-                labels.loads = colnames(X),labels.scores =rownames(X))
-g1[[1]]
+# g1<-plotPCA_methods(lista.spca.b,grupos,title1="beta scores sparse",title2 = "beta loads sparse",
+#                 labels.loads = colnames(X),labels.scores =rownames(X))
+# g1[[1]]
 ```
 
 
 
 ```{r}
-g2 <- plotPCA_methods(lista.spca.b.t,grupos,title1="beta scores sparse T",title2 = "beta loads sparse T",
-                labels.loads = colnames(X),labels.scores = general_data$Paciente)
-
-g2[[1]]
+# g2 <- plotPCA_methods(lista.spca.b.t,grupos,title1="beta scores sparse T",title2 = "beta loads sparse T",
+#                 labels.loads = colnames(X),labels.scores = general_data$Paciente)
+# 
+# g2[[1]]
 ```

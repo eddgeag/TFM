@@ -50,57 +50,6 @@ if(any(res.bioc==F)){
 }
 ```
 
-```{r PCAfunction}
-plotPCA_sparse <- function (pcX,factor, title, size = 1.5, glineas = 0.25,labels,plot.scores=T) {
-
-    X.scores <- pcX$scores
-    colnames(X.scores)<-paste0("PC",1:dim(X.scores)[2])
-    X.loads <- pcX$loadings
-    colnames(X.loads)<-paste0("PC",1:dim(X.scores)[2])
-    rot <- round(pcX$sdev^2/sum(pcX$sdev^2)*100,2)
-  if(plot.scores==T){
-  # scores
-  X.scores <- as.data.frame(X.scores)
-  Group <- factor[[1]]
-  Group2<-factor[[2]]
-  colores<-1:length(levels(Group))
-   # main plot
-   p1 <- ggplot(X.scores,aes(x=PC1, y=PC2)) +
-     theme_classic() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
-     scale_fill_discrete(name = "Group")
-   # avoiding labels superposition
-   
-      grafico<- p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25, size = size) + 
-     labs(x = c(paste("PC1",rot[1],"%")),y=c(paste("PC2",rot[2],"%"))) +  
-     ggtitle(paste("Principal Component Analysis for: ",title,sep=" "))+ 
-     theme(plot.title = element_text(hjust = 0.5)) +
-     scale_color_manual(values=colores)
-  }else{
-    
-   X.loads <- as.data.frame(X.loads)
-   # main plot
-   p1 <- ggplot(X.loads,aes(x=PC1, y=PC2)) +
-     theme_classic() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = "gray70"), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(X.loads[,1]),max(X.loads[,1]))) 
-   # avoiding labels superposition
-   
-      grafico<- p1 + geom_text_repel(aes(label = labels),segment.size = 0.25, size = size) + 
-     labs(x = c(paste("PC1",rot[1],"%")),y=c(paste("PC2",rot[2],"%"))) +  
-     ggtitle(paste("Principal Component Analysis for: ",title,sep=" "))+ 
-     theme(plot.title = element_text(hjust = 0.5))+ theme(legend.position = "none")
-    
-  }
-
-return(list(pcX,grafico))
-}
-```
 
 
 # Summary of the univariate descrpitve analysis.
@@ -773,7 +722,7 @@ plotPCA_methods <- function (X.list,factor, title1,title2, size = 1.5, glineas =
     
     colnames(X.loadings) <- paste0("PC",1:dim(X.loadings)[2])
     varianza<-as.data.frame( X.list$var)
-    varianza$PC <- paste0("PC",1:dim(X.loadings)[2])
+    varianza$PC <- paste0("PC",1:length(X.list$var))
     colnames(varianza)<-c("varianza","PC")
   # scores
   X.scores <- as.data.frame(X.scores)
@@ -786,7 +735,7 @@ plotPCA_methods <- function (X.list,factor, title1,title2, size = 1.5, glineas =
      geom_hline(yintercept = 0, color = "gray70") +
      geom_vline(xintercept = 0, color = "gray70") +
      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(X.scores[,1])-0.05,max(X.scores[,1]))) +
+     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
      scale_fill_discrete(name = "Group")
    # avoiding labels superposition
    
@@ -814,6 +763,7 @@ plotPCA_methods <- function (X.list,factor, title1,title2, size = 1.5, glineas =
   graficos <- list(grafico,grafico2)
 return(graficos)
 }
+
 ```
 
 
@@ -833,14 +783,15 @@ Because we are leading with more variables than observations, we are going to pe
 
 ### prcomp and princomp
 ```{r}
-pcxt <- prcomp(t(X),center=T,scale=F)
+pcxt <- prcomp(t(X),center=T,scale=T)
 list.pcxt <- list(scores=pcxt$rot,loadings=pcxt$x,var=100*pcxt$sdev^2/sum(pcxt$sdev^2))
 ```
 
 ```{r}
-graficos <- plotPCA_methods(list.pcxt,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X))
-graficos[[1]]
-graficos[[2]]
+graficos <- plotPCA_methods(list.pcxt,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X),
+                            size=3)
+grid.arrange(graficos[[1]],
+graficos[[2]])
 ```
 
 
@@ -854,9 +805,9 @@ list.nipals_1 <-list(scores=pcx.nipals$T,loadings=pcx.nipals$P,varianza=pcx.nipa
 
 
 ```{r}
-graficos <- plotPCA_methods(list.nipals_1,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X))
-graficos[[1]]
-graficos[[2]]
+graficos <- plotPCA_methods(list.nipals_1,factor = grupos,title1=" NIPALS scores ",title2 ="NIPALS loadings",labels.scores = rownames(X),labels.loads=colnames(X),size=3)
+grid.arrange(graficos[[1]],
+graficos[[2]],ncol=2)
 ```
 
 ### Sparse PCA
@@ -864,12 +815,13 @@ graficos[[2]]
 Let's create a function to fix beta andcontrol sparsity.
 ```{r}
 perf <- function(X,X.pred){
-
+  # print(dim(X))
+  # print(dim(X.pred))
   return(abs(norm(X-X.pred,type="F"))/norm(X,type="F"))
   
 }
 
-spca.perf <- function(X,fix_parameter,transpose){
+spca.perf <- function(X,fix_parameter,transpose,scale.){
   
   parameter <-  seq(1e-10,1,0.01)
   perf.vector <- vector(mode="numeric",length=length(parameter))
@@ -880,20 +832,20 @@ spca.perf <- function(X,fix_parameter,transpose){
   if(transpose==F){
     
     for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],verbose = F,k=ncol(X))$loadings))
+       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
   
     }
     beta <- beta[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,k=ncol(X))
+    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
     
   }else if(transpose==T){
     
         for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,k=ncol(X))$scores))
+       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,center=T,scale=scale.,k=ncol(X))$scores))
   
     }
     beta <- beta[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,k=ncol(X))
+    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
   }
     
   }else if(fix_parameter=="beta"){
@@ -903,20 +855,20 @@ spca.perf <- function(X,fix_parameter,transpose){
       if(transpose==F){
     
     for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,verbose = F,k=ncol(X))$loadings))
+       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
   
     }
     alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,k=ncol(X))
+    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
   }else if(transpose==T){
     
         for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],beta=beta,verbose = F,k=ncol(X))$scores))
+       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],center=T,scale=scale.,beta=beta,verbose = F,k=ncol(X))$scores))
   
     }
 
     alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,k=ncol(X))    
+    pcx<- spca(t(X),alpha=alpha,beta=beta,center=T,scale=scale.,verbose=F,k=ncol(X))    
   }
     
   
@@ -924,38 +876,33 @@ spca.perf <- function(X,fix_parameter,transpose){
   
   return(pcx)
 }
-
 ```
 
 
 ```{r}
-# pcx.a <- spca.perf(X,"beta",transpose = F)
-# pcx.a.t <- spca.perf(X,"beta",transpose=T)
-pcx.b <- spca.perf(X,"alpha",transpose = F)
-pcx.b.t <- spca.perf(X,"alpha",transpose=T)
-```
+X<-general_data[,6:ncol(general_data)] #data
 
+# pcx.a <- spca.perf(X,"beta",transpose = F,scale. = T)
+# pcx.a.t <- spca.perf(X,"beta",transpose=T,scale. = T)
+pcx.b <- spca.perf(X,"alpha",transpose = F,scale. = T)
+pcx.b.t <- spca.perf(X,"alpha",transpose=T,scale. = T)
+```
 
 ```{r}
-lista.spca.b <- list(loadings=(pcx.b$loadings),scores = t(pcx.b$scores),
-                     var=100*round(pcx.b$eigenvalues/sum(pcx.b$eigenvalues),2))
-lista.spca.b.t <- list(loadings=(pcx.b.t$scores),scores = pcx.b.t$loadings,
-                     var=100*round(pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues),2))
+varianza <- 100*pcx.b$eigenvalues^2/sum(pcx.b$eigenvalues^2)
+list.b <-list(scores=(pcx.b$scores),loadings=pcx.b$loadings,var=varianza)
 
+graficos <-plotPCA_methods(list.b,factor = grupos,title1 = "Genus data (scores)",title2 = "Genus data (loadings)",labels.scores = rownames(X),
+                labels.loads = colnames(X),size=4)
+grid.arrange(graficos[[1]],graficos[[2]])
 ```
-
 
 ```{r}
-g1<-plotPCA_methods(lista.spca.b,grupos,title1="beta scores sparse",title2 = "beta loads sparse",
-                labels.loads = colnames(X),labels.scores =rownames(X))
-g1[[1]]
+varianza <- 100*pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues)
+
+list.b.t <-list(scores=(pcx.b.t$loadings),loadings=pcx.b.t$scores,var=varianza)
+
+graficos <-plotPCA_methods(list.b.t,factor = grupos,title1 = "(scores)",title2 = " (loadings)",labels.scores = rownames(X),
+                labels.loads = colnames(X),size=2)
+grid.arrange(graficos[[1]],graficos[[2]])
 ```
-
-
-```{r}
-g2 <- plotPCA_methods(lista.spca.b.t,grupos,title1="beta scores sparse T",title2 = "beta loads sparse T",
-                labels.loads = colnames(X),labels.scores = general_data$Paciente)
-
-g2[[1]]
-```
-

@@ -810,6 +810,131 @@ grid.arrange(graficos[[1]],
 graficos[[2]],ncol=2)
 ```
 
+
+
+```{r}
+X<-general_data[,6:ncol(general_data)] #data
+X.c <- scale(X,scale=F)
+X.sc <- scale(X)
+pcx.nipals <- chemometrics::nipals(X.c,a=ncol(X.c),it = 200)
+pcx.nipals_variance <- 100*diag(t(pcx.nipals$T)%*%pcx.nipals$T)/sum(diag(t(pcx.nipals$T)%*%pcx.nipals$T))
+pcx.nipals.sc <- chemometrics::nipals(X.sc,a=ncol(X.sc),it = 200)
+pcx.nipals_variance.sc<- 100*diag(t(pcx.nipals.sc$T)%*%pcx.nipals.sc$T)/sum(diag(t(pcx.nipals.sc$T)%*%pcx.nipals.sc$T))
+```
+
+
+```{r}
+    X.scores <- pcx.nipals$T
+    X.loadings <- pcx.nipals$P
+    colnames(X.scores)<-paste0("PC",1:dim(X.scores)[2])
+    
+    colnames(X.loadings) <- paste0("PC",1:dim(X.loadings)[2])
+    varianza<-as.data.frame( pcx.nipals_variance)
+    varianza$PC <- paste0("PC",1:length(pcx.nipals_variance))
+    colnames(varianza)<-c("varianza","PC")
+  # scores
+  X.scores <- as.data.frame(X.scores)
+  Group <- general_data$GROUP
+  Group2<-general_data$OBESE
+  colores<-1:length(levels(Group))
+   # main plot
+   p1 <- ggplot(X.scores,aes(x=PC1, y=PC2)) +
+     theme_article() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
+     scale_fill_discrete(name = "Group")
+   # avoiding labels superposition
+   
+    grafico<- p1 + geom_text_repel(aes(y = PC2, label = general_data$Paciente),segment.size = 0.25, size =0.2) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("Scores Not scaled",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5)) +
+     scale_color_manual(values=colores)
+
+   X.loadings <- as.data.frame(X.loadings)
+   # main plot
+   p2 <- ggplot(X.loadings,aes(x=PC1, y=PC2,label = colnames(general_data[6:length(general_data)]))) +
+     theme_classic() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = "gray70"), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.loadings[,1]),max(X.loadings[,1]))) 
+   # avoiding labels superposition
+   
+      grafico2<- p2 + geom_text_repel(aes(label = colnames(general_data[6:length(general_data)])),segment.size = 0.2, size = 3) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("","Loadings Not scaled",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5))+ theme(legend.position = "none")
+    
+      
+
+
+    X.scores <- pcx.nipals.sc$T
+    X.loadings <- pcx.nipals.sc$P
+    colnames(X.scores)<-paste0("PC",1:dim(X.scores)[2])
+    
+    colnames(X.loadings) <- paste0("PC",1:dim(X.loadings)[2])
+    varianza<-as.data.frame( pcx.nipals_variance.sc)
+    varianza$PC <- paste0("PC",1:length(pcx.nipals_variance.sc))
+    colnames(varianza)<-c("varianza","PC")
+  # scores
+  X.scores <- as.data.frame(X.scores)
+  Group <- general_data$GROUP
+  Group2<-general_data$OBESE
+  colores<-1:length(levels(Group))
+   # main plot
+   p1 <- ggplot(X.scores,aes(x=PC1, y=PC2)) +
+     theme_article() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
+     scale_fill_discrete(name = "Group")
+   # avoiding labels superposition
+   
+    grafico_1<- p1 + geom_text_repel(aes(y = PC2, label = general_data$Paciente),segment.size = 0.25, size =0.2) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("Scores Scaled",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5)) +
+     scale_color_manual(values=colores)
+
+   X.loadings <- as.data.frame(X.loadings)
+   # main plot
+   p2 <- ggplot(X.loadings,aes(x=PC1, y=PC2,label = colnames(general_data[6:length(general_data)]))) +
+     theme_classic() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = "gray70"), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.loadings[,1]),max(X.loadings[,1]))) 
+   # avoiding labels superposition
+   
+      grafico_2<- p2 + geom_text_repel(aes(label = colnames(general_data[6:length(general_data)])),segment.size = 0.1, size = 2) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("","Loadings Scaled",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5))+ theme(legend.position = "none")
+    
+      grafico2
+
+  
+  
+    graficos <- ggarrange(grafico,grafico_1,grafico2,grafico_2,common.legend = T,legend = "bottom")
+  
+
+  
+  q1<-annotate_figure(graficos, top = text_grob("NIPALS-PCA", 
+               color = "black", face = "bold", size = 14))
+  q1
+```
+
+
+
+
+```{r}
+//
+```
+
 ### Sparse PCA
 
 Let's create a function to fix beta andcontrol sparsity.

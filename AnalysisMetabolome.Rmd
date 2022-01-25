@@ -516,7 +516,7 @@ i1<-bp.interaction[meta.mean][[1]]
 p1<-bp.1.vars(metabolome,meta.plts[c(1,3,5)],"Basal Alanine_1 " )+theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 p2<-bp.1.vars(metabolome,meta.plts[c(2,4,6)],"Postprandial Alanine_1")+ theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 
-grid.arrange(i1,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Mean basal values of alanine are higher in obese subjects than non-obese, but this relationship is only observable in men and women with PCOS. Separately on each day, one can visualize than regarfing obesity, women with PCOS have higher concentrations of this metabolite. 
@@ -533,7 +533,7 @@ i1<-bp.interaction[meta.mean][[1]]
 p1<-bp.1.vars(metabolome,meta.plts[c(1,3,5)],"Basal Acetate_1" )+theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 p2<-bp.1.vars(metabolome,meta.plts[c(2,4,6)],"Postprandial Acetate_1")+ theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 
-grid.arrange(i1,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Mean basal values of acetate are higher in non-obese females in comparison with obese females. The contrary happens with men. Healthy women present higher values than PCOS non-obese patients. But obese PCOS women have higher values than control obese women. Similar values between men and PCOS women are present. Obese men have higher values than obese females, and obese PCOS women have higher values than obese control females.
@@ -622,7 +622,7 @@ i1<-bp.interaction[meta.mean][[1]]
 p1<-bp.1.vars(metabolome,meta.plts[c(1,3,5)],"Basal  Pyroglutamic acid" )+theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 p2<-bp.1.vars(metabolome,meta.plts[c(2,4,6)],"Postprandial   Pyroglutamic acid")+ theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 
-grid.arrange(i1,p1,p2)
+grid.arrange(p1,p2)
 
 ```
 
@@ -727,7 +727,7 @@ i1<-bp.interaction[meta.mean][[1]]
 p1<-bp.1.vars(metabolome,meta.plts[c(1,3,5)],"Basal  Lysine_1" )+theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 p2<-bp.1.vars(metabolome,meta.plts[c(2,4,6)],"Postprandial   Lysine_1")+ theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 
-grid.arrange(i1,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Basal levels of lysisne are higher in obese subjects, but this difference is observable only between women. PCOS women have higher values than control women. And PCOS obese women have similar values than men. 
@@ -1007,7 +1007,7 @@ i1<-bp.interaction[meta.mean][[1]]
 p1<-bp.1.vars(metabolome,meta.plts[c(1,3,5)],"Basal Formate_1" )+theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 p2<-bp.1.vars(metabolome,meta.plts[c(2,4,6)],"Postprandial Formate_1")+ theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1,size = 7))
 
-grid.arrange(i1,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Basal levels of formate, have the highest value on healthy control women. However, obese PCOS and obese males have higher values than non-obese subjects. Control women have higher values than PCOS women. PCOS obese women have highly values than men.
@@ -1054,7 +1054,7 @@ plotPCA_methods <- function (X.list,factor, title1,title2, size = 1.5, glineas =
      scale_fill_discrete(name = "Group")
    # avoiding labels superposition
    
-      grafico<- p1 + geom_text_repel(aes(y = PC2, label = labels.scores),segment.size = 0.25, size = size) + 
+      grafico<- p1  + 
      labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
      ggtitle(paste("Principal Component Analysis for: ",title1,sep=" "))+ 
      theme(plot.title = element_text(hjust = 0.5)) +
@@ -1099,9 +1099,7 @@ Because we are leading with more variables than observations, we are going to pe
 ```{r}
 pcxt <- prcomp(t(X),center=T,scale=F)
 list.pcxt <- list(scores=pcxt$rot,loadings=pcxt$x,var=100*pcxt$sdev^2/sum(pcxt$sdev^2))
-```
 
-```{r}
 graficos <- plotPCA_methods(list.pcxt,factor = grupos,title1=" PCA classical scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X),size=3)
 grid.arrange(graficos[[1]],graficos[[2]])
 # graficos[[2]]
@@ -1111,7 +1109,7 @@ grid.arrange(graficos[[1]],graficos[[2]])
 ### NIPALS
 ```{r}
 n<-nrow(X)
-pcx.nipals <- chemometrics::nipals(X,a=ncol(X),it = 200)
+pcx.nipals <- chemometrics::nipals(scale(X),a=ncol(X),it = 200)
 pcx.nipals_variance <- 100*diag(t(pcx.nipals$T)%*%pcx.nipals$T)/sum(diag(t(pcx.nipals$T)%*%pcx.nipals$T))
 list.nipals_1 <-list(scores=pcx.nipals$T,loadings=pcx.nipals$P,varianza=pcx.nipals_variance)
 ```
@@ -1119,107 +1117,109 @@ list.nipals_1 <-list(scores=pcx.nipals$T,loadings=pcx.nipals$P,varianza=pcx.nipa
 
 ```{r}
 graficos <- plotPCA_methods(list.nipals_1,factor = grupos,title1="scores ",title2 ="loadings",labels.scores = rownames(X),labels.loads=colnames(X),size=3)
-grid.arrange(graficos[[1]],graficos[[2]])
+p1 <- graficos[[1]] +ggtitle("Scores")
+p2<- graficos[[2]]+ggtitle("Loadings")
 
+ggarrange(p1,p2,ncol = 1)
 ```
 
 
-### Sparse PCA
+<!-- <!-- ### Sparse PCA --> -->
 
-Let's create a function to fix beta andcontrol sparsity.
-```{r}
-perf <- function(X,X.pred){
+<!-- <!-- Let's create a function to fix beta andcontrol sparsity. --> -->
+<!-- <!-- ```{r} --> -->
+<!-- <!-- perf <- function(X,X.pred){ --> -->
 
-  return(abs(norm(X-X.pred,type="F"))/norm(X,type="F"))
-  
-}
+<!-- <!--   return(abs(norm(X-X.pred,type="F"))/norm(X,type="F")) --> -->
 
-spca.perf <- function(X,fix_parameter,transpose,scale.){
-  
-  parameter <-  seq(1e-10,1,0.01)
-  perf.vector <- vector(mode="numeric",length=length(parameter))
-  if(fix_parameter=="alpha"){
-    
-    beta <- parameter
-    alpha <- 1e-4
-  if(transpose==F){
-    
-    for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
-  
-    }
-    beta <- beta[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
-    
-  }else if(transpose==T){
-    
-        for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,center=T,scale=scale.,k=ncol(X))$scores))
-  
-    }
-    beta <- beta[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
-  }
-    
-  }else if(fix_parameter=="beta"){
-  
-    alpha <- parameter
-    beta <- 1e-4
-      if(transpose==F){
-    
-    for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,center=T,scale=scale.,verbose = F,k=ncol(X))$loadings))
-  
-    }
-    alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X))
-  }else if(transpose==T){
-    
-        for( i in 1:length(parameter)){
-       perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],center=T,scale=scale.,beta=beta,verbose = F,k=ncol(X))$scores))
-  
-    }
+<!-- <!-- } --> -->
 
-    alpha<- alpha[which.min(perf.vector)]
-    pcx<- spca(t(X),alpha=alpha,beta=beta,center=T,scale=scale.,verbose=F,k=ncol(X))    
-  }
-    
-  
-  }
-  
-  return(pcx)
-}
+<!-- <!-- spca.perf <- function(X,fix_parameter,transpose,scale.){ --> -->
 
-```
+<!-- <!--   parameter <-  seq(1e-10,1,0.01) --> -->
+<!-- <!--   perf.vector <- vector(mode="numeric",length=length(parameter)) --> -->
+<!-- <!--   if(fix_parameter=="alpha"){ --> -->
 
-```{r}
-# pcx.a <- spca.perf(X,"beta",transpose = F)
-# pcx.a.t <- spca.perf(X,"beta",transpose=T)
-# pcx.b <- spca.perf(X,"alpha",transpose = F,scale. = T)
-# pcx.b.t <- spca.perf(X,"alpha",transpose=T,scale. = T)
-```
+<!-- <!--     beta <- parameter --> -->
+<!-- <!--     alpha <- 1e-4 --> -->
+<!-- <!--   if(transpose==F){ --> -->
+
+<!-- <!--     for( i in 1:length(parameter)){ --> -->
+<!-- <!--        perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha,beta=beta[i],center=T,scale=scale.,verbose = F,k=ncol(X))$loadings)) --> -->
+
+<!-- <!--     } --> -->
+<!-- <!--     beta <- beta[which.min(perf.vector)] --> -->
+<!-- <!--     pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X)) --> -->
+
+<!-- <!--   }else if(transpose==T){ --> -->
+
+<!-- <!--         for( i in 1:length(parameter)){ --> -->
+<!-- <!--        perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha,beta=beta[i],verbose = F,center=T,scale=scale.,k=ncol(X))$scores)) --> -->
+
+<!-- <!--     } --> -->
+<!-- <!--     beta <- beta[which.min(perf.vector)] --> -->
+<!-- <!--     pcx<- spca(t(X),alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X)) --> -->
+<!-- <!--   } --> -->
+
+<!-- <!--   }else if(fix_parameter=="beta"){ --> -->
+
+<!-- <!--     alpha <- parameter --> -->
+<!-- <!--     beta <- 1e-4 --> -->
+<!-- <!--       if(transpose==F){ --> -->
+
+<!-- <!--     for( i in 1:length(parameter)){ --> -->
+<!-- <!--        perf.vector[i]<-perf(as.matrix((X)),t(spca((X),alpha=alpha[i],beta=beta,center=T,scale=scale.,verbose = F,k=ncol(X))$loadings)) --> -->
+
+<!-- <!--     } --> -->
+<!-- <!--     alpha<- alpha[which.min(perf.vector)] --> -->
+<!-- <!--     pcx<- spca(X,alpha=alpha,beta=beta,verbose=F,center=T,scale=scale.,k=ncol(X)) --> -->
+<!-- <!--   }else if(transpose==T){ --> -->
+
+<!-- <!--         for( i in 1:length(parameter)){ --> -->
+<!-- <!--        perf.vector[i]<-perf(as.matrix(t(X)),(spca(t(X),alpha=alpha[i],center=T,scale=scale.,beta=beta,verbose = F,k=ncol(X))$scores)) --> -->
+
+<!-- <!--     } --> -->
+
+<!-- <!--     alpha<- alpha[which.min(perf.vector)] --> -->
+<!-- <!--     pcx<- spca(t(X),alpha=alpha,beta=beta,center=T,scale=scale.,verbose=F,k=ncol(X))     --> -->
+<!-- <!--   } --> -->
 
 
-```{r}
-# lista.spca.b <- list(loadings=(pcx.b$loadings),scores = t(pcx.b$scores),
-#                      var=100*round(pcx.b$eigenvalues/sum(pcx.b$eigenvalues),2))
-# lista.spca.b.t <- list(loadings=(pcx.b.t$scores),scores = pcx.b.t$loadings,
-#                      var=100*round(pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues),2))
+<!-- <!--   } --> -->
 
-```
+<!-- <!--   return(pcx) --> -->
+<!-- <!-- } --> -->
 
+<!-- <!-- ``` --> -->
 
-```{r}
-# g1<-plotPCA_methods(lista.spca.b,grupos,title1="beta scores sparse",title2 = "beta loads sparse",
-#                 labels.loads = colnames(X),labels.scores =rownames(X))
-# g1[[1]]
-```
-
+<!-- <!-- ```{r} --> -->
+<!-- <!-- # pcx.a <- spca.perf(X,"beta",transpose = F) --> -->
+<!-- <!-- # pcx.a.t <- spca.perf(X,"beta",transpose=T) --> -->
+<!-- <!-- # pcx.b <- spca.perf(X,"alpha",transpose = F,scale. = T) --> -->
+<!-- <!-- # pcx.b.t <- spca.perf(X,"alpha",transpose=T,scale. = T) --> -->
+<!-- <!-- ``` --> -->
 
 
-```{r}
-# g2 <- plotPCA_methods(lista.spca.b.t,grupos,title1="beta scores sparse T",title2 = "beta loads sparse T",
-#                 labels.loads = colnames(X),labels.scores = general_data$Paciente)
-# 
-# g2[[1]]
-```
+<!-- <!-- ```{r} --> -->
+<!-- <!-- # lista.spca.b <- list(loadings=(pcx.b$loadings),scores = t(pcx.b$scores), --> -->
+<!-- <!-- #                      var=100*round(pcx.b$eigenvalues/sum(pcx.b$eigenvalues),2)) --> -->
+<!-- <!-- # lista.spca.b.t <- list(loadings=(pcx.b.t$scores),scores = pcx.b.t$loadings, --> -->
+<!-- <!-- #                      var=100*round(pcx.b.t$eigenvalues/sum(pcx.b.t$eigenvalues),2)) --> -->
+
+<!-- <!-- ``` --> -->
+
+
+<!-- <!-- ```{r} --> -->
+<!-- <!-- # g1<-plotPCA_methods(lista.spca.b,grupos,title1="beta scores sparse",title2 = "beta loads sparse", --> -->
+<!-- <!-- #                 labels.loads = colnames(X),labels.scores =rownames(X)) --> -->
+<!-- <!-- # g1[[1]] --> -->
+<!-- <!-- ``` --> -->
+
+
+
+<!-- <!-- ```{r} --> -->
+<!-- <!-- # g2 <- plotPCA_methods(lista.spca.b.t,grupos,title1="beta scores sparse T",title2 = "beta loads sparse T", --> -->
+<!-- <!-- #                 labels.loads = colnames(X),labels.scores = general_data$Paciente) --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # g2[[1]] --> -->
+<!-- <!-- ``` --> -->

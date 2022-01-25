@@ -69,7 +69,7 @@ bp.1.vars<-function(datos_,vars,y_lab){
     # print(head(df.melt))
 
 
-  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+facet_grid(~OBESE)+xlab("") +geom_hline(yintercept=0, linetype="dashed", color = "red")
+  p2<-ggplot(df.melt,aes(y=value,x=variable,fill=GROUP))+geom_boxplot()+ylab(y_lab)+facet_grid(~OBESE)+xlab("") +geom_hline(yintercept=0, linetype="dashed", color = "red")+theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1,color = "black",size=7))
   
   
   return(p2)
@@ -442,20 +442,20 @@ Now, we are going to proceed to observe the different values of each variable at
 
 ```{r cd14}
 
-cd14_basal<-bp.interaction[1]
+# cd14_basal<-bp.interaction[1]
 p1<-bp.1.vars(IP,c("G_CD14_0","L_CD14_0","P_CD14_0"),"Basal CD14")
-p2<-bp.1.vars(IP,c("AUC_CD14_Glu","AUC_CD14_Lipids","AUC_CD14_Prots"),"Postpradial CD14")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
-grid.arrange(cd14_basal[[1]],p1,p2)
+p2<-bp.1.vars(IP,c("AUC_CD14_Glu","AUC_CD14_Lipids","AUC_CD14_Prots"),"Postpradial CD14")
+grid.arrange(p1,p2)
 ```
 
 Postpradial levels of `CD14` are lower than basal levels of this permeability marker. Non-obese women have higher values of `CD14` at basal stage, followed by non-obese men. Obese PCOS women, have the highest values between obese subjects, but lower than healthy women, and similar values in non-obese PCOS women. Obese men and obese women, have lower levels than non-obese subjects. Postpradial levels, are lower in non-obese subjects, being lower women. Obese men at the first day have the highest values.
 
 ##### LBP
 ```{r}
-lbp_basal<-bp.interaction[8][[1]]
+# lbp_basal<-bp.interaction[8][[1]]
 p1<-bp.1.vars(IP,c("G_LBP__0","L_LBP_0","P_LBP_0"),"Basal LBP")
 p2<-bp.1.vars(IP,c("AUC_LBP_Glu","AUC_LBP_Lipids","AUC_LBP_Prots"),"Postpradial LBP")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
-grid.arrange(lbp_basal,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Basal levels of `LBP` are higher than Postpradial stage. The IP data tells us that the mean basal values are higher in obese subjects, but mostly on PCOS obese women. At Postpradial stage, higher values have the non.obese subjects, but with more variability in obese subjects. Obese men at the lipid load day, have the highest values at Postprandial levels. In general at Postpradial stage the levels are similar between non-obese subjects.
@@ -467,7 +467,7 @@ Basal levels of `LBP` are higher than Postpradial stage. The IP data tells us th
 lbp_basal<-bp.interaction[15][[1]]
 p1<-bp.1.vars(IP,c("G_GLP2_0","L_GLP2_0","P_GLP2_0"),"Basal GLP2")
 p2<-bp.1.vars(IP,c("AUC_GLP2_Glu","AUC_GLP2_Lipids","AUC_GLP2_Prots"),"Postpradial GLP2")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
-grid.arrange(lbp_basal,p1,p2)
+grid.arrange(p1,p2)
 ```
 
 Again, basal levels of `GLP2` are higher than at Postpradial stage. Regarding the mean basal values, we observe that the obese PCOS and men have higher values. Control females, both obese and non-obese have similar distribution of values. While healthy males and PCOS obese women have similar values. If we see the data at the different days, on non-obese PCOS women, these patients have the lower values.
@@ -482,8 +482,8 @@ At Postpradial time, in general, across subjects, the valuesof `GLP2` increases 
 ```{r zonulin}
 lbp_basal<-bp.interaction[22][[1]]
 p1<-bp.1.vars(IP,c("G_Zonulin_0","L_Zonulin_0","P_Zonulin_0"),"Basal Zonulin")
-p2<-bp.1.vars(IP,c("AUC_Zonulin_Glu","AUC_Zonulin_Lipids","AUC_Zonulin_Prots"),"Postpradial Zonulin")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
-grid.arrange(lbp_basal,p1,p2)
+p2<-bp.1.vars(IP,c("AUC_Zonulin_Glu","AUC_Zonulin_Lipids","AUC_Zonulin_Prots"),"Postpradial Zonulin")
+grid.arrange(p1,p2)
 ```
 
 
@@ -495,13 +495,122 @@ Basal levels of `zonulin` are higher than Postpradial levels. The mean basal lev
 lbp_basal<-bp.interaction[29][[1]]
 p1<-bp.1.vars(IP,c("G_Succinate_0","L_Succinate_0","P_Succinate_0"),"Basal Succinate" )
 p2<-bp.1.vars(IP,c("AUC_Succ_Glu","AUC_Succ_Lipids","AUC_Succ_Prots"),"Postpradial Succinate")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.9, hjust=1,size = 7))
-grid.arrange(lbp_basal,p1,p2)
+grid.arrange(p1,p2)
 ```
 Basal concentration levels of `succinate` are higher than Postprandial levels. This levels are higher in obese subjects, particularly on PCOS women. At Postpradial time, non-obese males, have higher values, being this concentration higher on the first day. On obese subjects, also, the higher values are at the first day, with PCOS obese females with higher concentration, even in comparison with non-obese subjects. 
+
+```{r}
+//
+```
 
 ## Statistical multivariate descriptive analysis.
 
 We are going to perform a dimensionality reduction approach. Because, we are only interested on the visualization of the variables, we did not perform corroboration of the assumptions underlying PCA. Apart from the IP markers, we are also going to compute the PCA with the BMi variable.
+
+
+
+
+```{r}
+Y<-IP[,6:ncol(IP)]
+pcx<-prcomp(Y,scale=T,center=T)
+
+   X.scores <- pcx$x
+    X.loadings <- pcx$rot
+    colnames(X.scores)<-paste0("PC",1:dim(X.scores)[2])
+    
+    colnames(X.loadings) <- paste0("PC",1:dim(X.loadings)[2])
+    varianza<-as.data.frame( 100*pcx$sdev^2/sum(pcx$sdev^2))
+    varianza$PC <- paste0("PC",1:length(100*pcx$sdev^2/sum(pcx$sdev^2)))
+    colnames(varianza)<-c("varianza","PC")
+  # scores
+  X.scores <- as.data.frame(X.scores)
+  Group <- IP$GROUP
+  Group2<-IP$OBESE
+  colores<-1:length(levels(Group))
+   # main plot
+   p1 <- ggplot(X.scores,aes(x=PC1, y=PC2)) +
+     theme_article() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
+     scale_fill_discrete(name = "Group")+
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("Scores BMI included",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5)) +
+     scale_color_manual(values=colores)+ theme(legend.position = "none")
+
+   X.loadings <- as.data.frame(X.loadings)
+   # main plot
+   p2.1 <- ggplot(X.loadings,aes(x=PC1, y=PC2,label = colnames(Y))) +
+     theme_classic() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = "gray70"), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.loadings[,1]),max(X.loadings[,1]))) +
+     geom_text_repel(aes(label = colnames(Y)),segment.size = 0.2, size = 3) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("","Loadings BMI included",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5))+ theme(legend.position = "none")
+
+X<-IP[,7:ncol(IP)]
+  
+ pcx<-prcomp(X,scale=T,center=T)
+     
+
+
+    X.scores <- pcx$x
+    X.loadings <- pcx$rot
+    colnames(X.scores)<-paste0("PC",1:dim(X.scores)[2])
+    
+    colnames(X.loadings) <- paste0("PC",1:dim(X.loadings)[2])
+    varianza<-as.data.frame( 100*pcx$sdev^2/sum(pcx$sdev^2))
+    varianza$PC <- paste0("PC",1:length(100*pcx$sdev^2/sum(pcx$sdev^2)))
+    colnames(varianza)<-c("varianza","PC")
+  # scores
+  X.scores <- as.data.frame(X.scores)
+  Group <- IP$GROUP
+  Group2<-IP$OBESE
+  colores<-1:length(levels(Group))
+   # main plot
+   p1_1 <- ggplot(X.scores,aes(x=PC1, y=PC2)) +
+     theme_article() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.scores[,1]),max(X.scores[,1]))) +
+     scale_fill_discrete(name = "Group")+
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("Scores BMI not included",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5)) +
+     scale_color_manual(values=colores)
+
+   X.loadings <- as.data.frame(X.loadings)
+   # main plot
+   p2_2 <- ggplot(X.loadings,aes(x=PC1, y=PC2,label = colnames(X))) +
+     theme_classic() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = "gray70"), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(X.loadings[,1]),max(X.loadings[,1]))) +
+     geom_text_repel(aes(label = colnames(X)),segment.size = 0.1, size = 2) + 
+     labs(x = c(paste("PC1",round(varianza[1,1],2),"%")),y=c(paste("PC2",round(varianza[2,1],2),"%"))) +  
+     ggtitle(paste("","Loadings BMI not included",sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5))+ theme(legend.position = "none")
+    
+
+  
+  
+    graficos <- ggarrange(p1,p2.1,common.legend = T,legend = "bottom")
+  
+
+  
+  q1<-annotate_figure(graficos, top = text_grob("Classic PCA IP data", 
+               color = "black", face = "bold", size = 14))
+  q1
+
+
+```
 
 
 ```{r}

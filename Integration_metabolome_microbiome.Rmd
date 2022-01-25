@@ -729,6 +729,23 @@ lista_graficos_pls_inde_meta[[4]],common.legend = T)
 
 ```
 
+
+```{r}
+res2 <- plsr(Y.abs.g~X.basal,val.type="CV",center=T,scale=T)
+
+plot(res2$scores,col=variables_in_bacteria$GROUP,pch=as.numeric(variables_in_bacteria$OBESE))
+```
+
+
+
+
+
+
+
+
+
+
+
 ### Summary results PLS2
 The best output is with the independent variable the metabolome, with better results on the genus.
 
@@ -1192,6 +1209,8 @@ if(!ncomp<2){
 
 }
 ```
+
+
 
 
 

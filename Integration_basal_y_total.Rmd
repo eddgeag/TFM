@@ -20,7 +20,7 @@ params:
   file_metabolome: Integromics_Metabolome.xlsx
   file_general: Integromics_1.xlsx
   file_microbiota : integromics_microbiota.xlsx
-  folder.data: ../datos
+  folder.data: ../../datos
   subtitulo: FINAL RESULTS
 geometry: margin=2cm
 ---
@@ -1099,9 +1099,9 @@ Y<-sgccda.res_met_gen.interaccion$variates$microbiome
 colnames(Y)<-paste0("micro",colnames(Y))
 datos <- data.frame(cbind(X,Y))
 str(datos)
-p1 <- ggplot(datos,aes(metcomp1,metcomp3))+theme_article() +
+p1 <- ggplot(datos,aes(metcomp1,metcomp3,label=rownames(datos)))+theme_article() +
      geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") + geom_text_repel(size=1.5)+
      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
      coord_cartesian(xlim = c(min(datos[,1]),max(datos[,1]))) +
      scale_fill_discrete(name = "Group")
@@ -1288,6 +1288,9 @@ annotate_figure(plot_pcos, top = text_grob("Metabolome-Microbiome: Variable cont
 p<-mixOmics::circosPlot(sgccda.res_met_gen.interaccion,cutoff=0.5,size.variables=0.9,showIntraLinks=F)
 ```
 
+```{r}
+
+```
 
 
 
@@ -1301,7 +1304,7 @@ pcos.obe <- mat[variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.
 
 
 ```{r}
-barplot(colMeans(pcosmat[,apply(abs(pcosmat)>2.7, 2, any)]),las=3,cex.names = 0.7,ylim=c(-0.7,1.5),col="steelblue",main="\n Mean correlation between variables \n and \n Obese PCOS women")
+# barplot(colMeans(pcosmat[,apply(abs(pcosmat)>2.7, 2, any)]),las=3,cex.names = 0.7,ylim=c(-0.7,1.5),col="steelblue",main="\n Mean correlation between variables \n and \n Obese PCOS women")
 ```
 
 
@@ -1895,476 +1898,1061 @@ annotate_figure(p, top = text_grob("Basal Integration with Genera: DIABLO",
 
 
 
+```{r,fig.height=12,fig.width=12}
+fn.contrib <- function(p,grupcon1,grupcon2){
+  p$variables <-rownames(p)
+  p.obj <-p[p[,"GroupContrib"]==grupcon1 & p[,paste0("Contrib.",grupcon2)]==T,c("variables","importance")]
 
+  return(p.obj)
+}
+mindis <- 100
+p<-plotLoadings(sgccda.res_genus,contrib = "max",block=1,plot=F,ndisplay = mindis,comp=1)
+q<-plotLoadings(sgccda.res_genus,contrib = "max",block=2,plot=F,ndisplay = mindis,comp = 1)
+r<-plotLoadings(sgccda.res_genus,contrib = "max",block=3,plot=F,ndisplay = mindis,comp = 1)
+s<-plotLoadings(sgccda.res_genus,contrib = "max",block=4,plot=F,ndisplay = mindis,comp = 1)
 
-```{r}
-p<-plotLoadings(sgccda.res_genus,contrib = "max",block=1,plot=F,method="mean",comp=1,ndisplay = 70)
-q<-plotLoadings(sgccda.res_genus,contrib = "max",block=2,plot=F,method="mean",comp=1,ndisplay = 70)
-r<-plotLoadings(sgccda.res_genus,contrib = "max",block=3,plot=F,method="mean",comp=1,ndisplay = 70)
-s<-plotLoadings(sgccda.res_genus,contrib = "max",block=4,plot=F,method="mean",comp=1.,ndisplay = 70)
 
 (grupcon1. <- sort(unique(p$GroupContrib)))
 (grupcon2. <- sort(colnames(p)[grep("^[cig]",invert = T,ignore.case = T,colnames(p))]))
 
 grupos.con <-cbind(grupcon1.,grupcon2.)
+aux1<-vector(mode="list",length=6);names(aux1)<-grupcon1.
+aux2 <-vector(mode="list",length=6);names(aux2)<-grupcon1.
+aux3 <-vector(mode="list",length=6);names(aux3)<-grupcon1.
+aux4 <-vector(mode="list",length=6);names(aux4)<-grupcon1.
 
-lista_loads <- list(p,q,r,s)
-aux1 <- vector(mode = "list",length=4)
-block.name <-c("Clinical","IP","Metabolome","Microbiome")
-for(i in 1:length(lista_loads)){
+  for(i in 1:6){
   
-  aux1[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[1,1],
-                        grupcon2 = grupos.con[1,2])+labs(x=block.name[i])
+  aux1[[i]]<-fn.contrib(p,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux2[[i]]<-fn.contrib(q,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux3[[i]]<-fn.contrib(r,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux4[[i]]<-fn.contrib(s,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+
+  }
+
+
+fn.exportmat <- function(Z,grupo,variables){
+  Z<-as.data.frame(Z)
+  Z.sub<-Z[rownames(Z)%in% grupo,variables]
+  if(is.null(dim(Z.sub))){
+    
+    Z.sub<-as.data.frame(Z.sub)
+    rownames(Z.sub)<-rownames(Z)[rownames(Z)%in% grupo]
+    Z.sub$pacientes <- rownames(Z.sub)
+    colnames(Z.sub)<-c(variables,"pacientes")
+  }else{
+    Z.sub<-as.data.frame(Z.sub)
+  }
+  
+  return(Z.sub)
+  
+  
 }
 
-plot_female <- ggarrange(aux1[[1]],aux1[[2]],aux1[[3]],aux1[[4]])
-annotate_figure(plot_female, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
-
-aux2 <- vector(mode = "list",length=4)
-for(i in 1:length(lista_loads)){
-  
-  aux2[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[2,1],
-                        grupcon2 = grupos.con[2,2])+labs(x=block.name[i])
+grupos <- unique(variables_in_bacteria$interaccion)
+z <- data.frame(cimDiablo(sgccda.res_genus)$mat)
+list_comp1 <- vector(mode="list",length = 6)
+names(list_comp1)<-grupos
+aux.tmp<-list(aux1,aux2,aux3,aux4)
+for(l in 1:length(list_comp1)){
+  list.temp<-vector(mode="list",length=4)
+  sujetos <- variables_in_bacteria[variables_in_bacteria$interaccion==grupos[l],"Paciente"]
+  for(b in 1:4){
+    
+    variables <-aux.tmp[[b]][[l]][,"variables"]
+    variables<-variables[!is.na(variables)]
+    variables<-variables[variables %in% colnames(z)]
+    list.temp[[b]]<-fn.exportmat(z,sujetos,variables)
+  }
+list_comp1[[l]]<-list.temp
 }
 
-plot_female_obese <- ggarrange(aux2[[1]],aux2[[2]],aux2[[3]],aux2[[4]])
-annotate_figure(plot_female_obese, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
+## Control Females
+ctrl.females.1 <-(do.call(bind_cols,list_comp1$`No Obese.Female`))
+ctrl.females.1<-as.matrix(ctrl.females.1[,grep("pacientes",colnames(ctrl.females.1),invert = T)])
+cim(ctrl.females.1)
 
-
-aux3 <- vector(mode = "list",length=4)
-for(i in 1:length(lista_loads)){
-  
-  aux3[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[3,1],
-                        grupcon2 = grupos.con[3,2])+labs(x=block.name[i])
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
 }
+# Plot
 
-plot_male <- ggarrange(aux3[[1]],aux3[[2]],aux3[[3]],aux3[[4]])
-annotate_figure(plot_male, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.females.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.females.1)
+cim(ctrl.females.1,title="Non obese control females")
+corrplot::corrplot(micor[w,w])
+mtext("Non obese control females", at=2.5, line=-0.5, cex=2)
 
+text(pos, p_format(pval),col = "white")
+# text(pos, p_format(pval))
 
+# Obese Females
+ctrl.females.obese.1 <-(do.call(bind_cols,list_comp1$Obese.Female))
+ctrl.females.obese.1<-as.matrix(ctrl.females.obese.1[,grep("pacientes",colnames(ctrl.females.obese.1),
+                                             invert = T)])
+cim(ctrl.females.obese.1,title="Obese control females")
 
-
-
-aux4 <- vector(mode = "list",length=4)
-for(i in 1:length(lista_loads)){
-  
-  aux4[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[4,1],
-                        grupcon2 = grupos.con[4,2])+labs(x=block.name[i])
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
 }
+# Plot
 
-plot_male_obese <- ggarrange(aux4[[1]],aux4[[2]],aux4[[3]],aux4[[4]])
-annotate_figure(plot_male_obese, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.females.obese.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.females.obese.1)
+
+corrplot::corrplot(micor[w,w],title="Obese control females")
+mtext("Obese control females", at=2.5, line=-0.5, cex=2)
+
+text(pos, p_format(pval),col = "white")
 
 
-aux5 <- vector(mode = "list",length=4)
-for(i in 1:length(lista_loads)){
-  
-  aux5[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[5,1],
-                        grupcon2 = grupos.con[5,2])+labs(x=block.name[i])
+# Male
+ctrl.males.1 <-(do.call(bind_cols,list_comp1$`No Obese.Male`))
+ctrl.males.1<-as.matrix(ctrl.males.1[,grep("pacientes",colnames(ctrl.males.1),
+                                             invert = T)])
+cim(ctrl.males.1,title="Non obese control males")
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
 }
+# Plot
 
-plot_pcos <- ggarrange(aux5[[1]],aux5[[2]],aux5[[3]],aux5[[4]])
-annotate_figure(plot_pcos, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.males.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.males.1)
 
-aux6 <- vector(mode = "list",length=4)
-for(i in 1:length(lista_loads)){
-  
-  aux6[[i]]<-fn.contrib(lista_loads[[i]],
-                        grupcon1 = grupos.con[6,1],
-                        grupcon2 = grupos.con[6,2])+labs(x=block.name[i])
+corrplot::corrplot(micor[w,w])
+mtext("Non obese control males", at=2.5, line=-0.5, cex=2)
+
+text(pos, p_format(pval),col = "white")
+
+# Male OBese
+ctrl.males.obese.1 <-(do.call(bind_cols,list_comp1$Obese.Male))
+ctrl.males.obese.1<-as.matrix(ctrl.males.obese.1[,grep("pacientes",colnames(ctrl.males.obese.1),
+                                             invert = T)])
+cim(ctrl.males.obese.1,title="Obese control males")
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
 }
+# Plot
 
-plot_pcos_obese <- ggarrange(aux6[[1]],aux6[[2]],aux6[[3]],aux6[[4]])
-annotate_figure(plot_pcos_obese, top = text_grob("All blocks-Variable contributions", 
-               color = "black", face = "bold", size = 14))
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.males.obese.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.005, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.males.obese.1)
+
+corrplot::corrplot(micor[w,w])
+mtext("Obese control males", at=2.5, line=-0.5, cex=2)
+
+text(pos, p_format(pval),col = "white")
+
+# pcos
+  pcos.1 <-(do.call(bind_cols,list_comp1$`No Obese.PCOS`))
+pcos.1<-as.matrix(pcos.1[,grep("pacientes",colnames(pcos.1),
+                                             invert = T)])
+cim(pcos.1,title="Non obese PCOS females")
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(pcos.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(pcos.1)
+
+corrplot::corrplot(micor[w,w])
+mtext("Non obese PCOS females", at=2.5, line=-0.5, cex=2)
+
+text(pos, p_format(pval),col = "white")
 
 
+# pcos obese
+  pcos.obese.1 <-(do.call(bind_cols,list_comp1$Obese.PCOS))
+pcos.obese.1<-as.matrix(pcos.obese.1[,grep("pacientes",colnames(pcos.obese.1),
+                                             invert = T)])
+cim(pcos.obese.1,title="obese PCOS females")
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(pcos.obese.1, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(pcos.obese.1)
+
+corrplot::corrplot(micor[w,w])
+mtext("obese PCOS females", at=2.5, line=-0.5, cex=2)
+text(pos, p_format(pval),col = "white")
+```
+
+
+No hay variables entre la interseccion de los diferentes grupos 
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.females),colnames(ctrl.females.obese),colnames(ctrl.males),
+          colnames(ctrl.males.obese),colnames(pcos),colnames(pcos.obese)))
+```
+Vemos por sexo
+
+Mujeres no hay variables en la interseccion entre controles femeninos y pcos
+
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.females),colnames(ctrl.females.obese),colnames(pcos),colnames(pcos.obese)))
+```
+Entre hombres tampoco hay variables en comun
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.males),colnames(ctrl.males.obese)))
+```
+Vemos ahora entre grupo obesos, tampoco hya variables en comun
+
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.males.obese),colnames(ctrl.females.obese),colnames(pcos.obese)))
+```
+Vemos ahora entre delgados
+
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.males),colnames(ctrl.females),colnames(pcos)))
+```
+
+Ahora vemos los controles por separado, entre hombres no hay variables enc omun
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.males.obese),colnames(ctrl.males)))
+```
+Entre mujeres control si hay variables en comun
+```{r}
+Reduce(base::intersect, list(colnames(ctrl.females.obese),colnames(ctrl.females)))
+
+```
+
+#Mujeres control sanas-PCOS delgadas
+```{r}
+Reduce(base::intersect, list(colnames(pcos),colnames(ctrl.females)))
+
+```
+# Mujeres control obessas-PCOS delgadas
+```{r}
+Reduce(base::intersect, list(colnames(pcos),colnames(ctrl.females.obese)))
+
+```
+#hombres sanos PCOS delfadas
+```{r}
+Reduce(base::intersect, list(colnames(pcos),colnames(ctrl.males)))
+
+```
+#hombres obesos PCOS delfadas
+```{r}
+Reduce(base::intersect, list(colnames(pcos),colnames(ctrl.males.obese)))
 
 ```
 
 
-
+#Mujeres control sanas-PCOS obesas
 ```{r}
-c_prop<-sgccda.res_genus$prop_expl_var$clinical_data
-ip_prop <- sgccda.res_genus$prop_expl_var$IP
-met_prop <- sgccda.res_genus$prop_expl_var$metabolome
-mic_prop <- sgccda.res_genus$prop_expl_var$microbiome
-Y_prop<-sgccda.res_genus$prop_expl_var$Y
-var.exp <- 100*data.frame(clinical=c_prop,ip=ip_prop,met=met_prop,mic=mic_prop,Y=Y_prop)
-var.exp$comps <-rownames(var.exp)
-p1<- ggplot(data=var.exp, aes(x=comps, y=clinical)) + 
-    geom_bar(stat="identity",col="black",fill="darkblue")+
-    theme_article()+
-  labs(y="Clinical Data",x="")+
-  theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35)) 
+Reduce(base::intersect, list(colnames(pcos.obese),colnames(ctrl.females)))
 
-p2<- ggplot(data=var.exp, aes(x=comps, y=ip)) + 
-    geom_bar(stat="identity",col="black",fill="darkblue")+
-    theme_article()+
-  labs(y="IP Data",x="")+
-  theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35)) 
-
-p3<- ggplot(data=var.exp, aes(x=comps, y=met)) + 
-    geom_bar(stat="identity",col="black",fill="darkblue")+
-    theme_article()+
-  labs(y="Metabolome Data",x="")+
-  theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35)) 
-
-p4<- ggplot(data=var.exp, aes(x=comps, y=mic)) + 
-    geom_bar(stat="identity",col="black",fill="darkblue")+
-    theme_article()+
-  labs(y="Microbiome Data",x="")+
-  theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35)) 
-
-
-
-var.expl.plot <-ggarrange(p1,p2,p3,p4)
-annotate_figure(var.expl.plot, top = text_grob("Explained Variation by Block (%)", 
-               color = "black", face = "bold", size = 14))
 ```
-
-
+# Mujeres control obessas-PCOS obese
 ```{r}
+Reduce(base::intersect, list(colnames(pcos.obese),colnames(ctrl.females.obese)))
 
-c_prop<-sgccda.res_genus$prop_expl_var$clinical_data
-ip_prop <- sgccda.res_genus$prop_expl_var$IP
-met_prop <- sgccda.res_genus$prop_expl_var$metabolome
-mic_prop <- sgccda.res_genus$prop_expl_var$microbiome
-Y_prop<-sgccda.res_genus$prop_expl_var$Y
-round(rbind(c_prop,ip_prop,met_prop,mic_prop,Y_prop),2)
 ```
-
-
-
+#hombres sanos PCOS obese
 ```{r}
-X <- data.frame(sgccda.res_genus$loadings$clinical_data)
-Y <- data.frame(sgccda.res_genus$loadings$IP)
-Z <- data.frame(sgccda.res_genus$loadings$metabolome)
-W <- data.frame(sgccda.res_genus$loadings$microbiome)
-# colnames(X) <-paste0("met",colnames(X))
-# colnames(Y) <- paste0("micro",colnames(Y))
-plot1 <- ggplot() + 
-    geom_point(data = X,aes(comp1,comp2),label=rownames(X),color="blue") + 
-  geom_text_repel(data=X,aes(comp1,comp2,
-                             label=rownames(X)),
-                  segment.size = 0.25, size = 2)+coord_cartesian(xlim =
-                                                          c(-0.4,0.4),
-                                                          ylim= c(-0.4,0.4))+theme_article()+geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +labs(x="")+ggtitle("Clinical")
+Reduce(base::intersect, list(colnames(pcos.obese),colnames(ctrl.males)))
 
-
-plot2 <- ggplot()+geom_point(data = Y,aes(comp1,comp2),color='blue')+ 
-  geom_text_repel(data=Y,aes(comp1,comp2,label=rownames(Y)),
-                  segment.size = 0.25, size = 3)+coord_cartesian(xlim =
-                                                          c(-0.5,0.5),
-                                                          ylim= c(-0.5,0.5))+theme_article()+geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") + labs(x="",y="")+ggtitle("IP")
-plot3 <- ggplot()+geom_point(data = Z,aes(comp1,comp2),color='blue')+ 
-  geom_text_repel(data=Z,aes(comp1,comp2,label=rownames(Z)),
-                  segment.size = 0.1, size =2)+coord_cartesian(xlim =
-                                                          c(-0.2,0.2),
-                                                          ylim= c(-0.3,0.3))+theme_article()+geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +ggtitle("Metabolome")
-plot4 <- ggplot()+geom_point(data = W,aes(comp1,comp2),color='blue')+ 
-  geom_text_repel(data=W,aes(comp1,comp2,label=rownames(W)),
-                  segment.size = 0.1, size = 3)+coord_cartesian(xlim =
-                                                          c(-0.3,0.3),
-                                                          ylim= c(-0.3,0.3))+theme_article()+geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") + labs(y="")+ggtitle("Microbiome")
-loadsplot <- ggarrange(plot1,plot2,plot3,plot4)
-
-annotate_figure(loadsplot, top = text_grob("Loadings Plot", 
-               color = "black", face = "bold", size = 14))
 ```
-
-
-
+#hombres obesos PCOS obese
 ```{r}
-X<-data.frame(sgccda.res_genus$variates$clinical_data)
-colnames(X)<-paste0("C_",colnames(X))
-Y<-data.frame(sgccda.res_genus$variates$IP)
-colnames(Y)<-paste0("IP_",colnames(Y))
-Z <- data.frame(sgccda.res_genus$variates$metabolome)
-colnames(Z) <- paste0("Met_",colnames(Z))
-W <- data.frame(sgccda.res_genus$variates$microbiome)
-colnames(W) <- paste0("Micro_",colnames(W))
-
-
-
-
-datos_comb0 <- data.frame(c(X,W))
-
-p1<- ggplot(datos_comb0,aes(C_comp2,Micro_comp1))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb0[,2]),max(datos_comb0[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC2 Clinical",
-                      round(100*sgccda.res_genus$prop_expl_var$clinical_data[2],2),"%")), y=c(paste("PC1 Micro",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) +
-     ggtitle(paste("Clinical-Microbiome ",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-
-
-
-datos_comb1 <- data.frame(c(Y,Z))
-
-p2<- ggplot(datos_comb1,aes(IP_comp2,Met_comp1))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb1[,2]),max(datos_comb1[,2]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC2 IP",
-                      round(100*sgccda.res_genus$prop_expl_var$IP[2],2),"%")), y=c(paste("PC1 Metabolome",round(100*sgccda.res_genus$prop_expl_var$metabolome[1],2),"%"))) +
-     ggtitle(paste("IP-Metabolome ",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-datos_comb1 <- data.frame(c(Y,W))
-
-p3<- ggplot(datos_comb1,aes(IP_comp1,Micro_comp2,label=variables_in_bacteria$Paciente))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC 1 IP",round(100*sgccda.res_genus$prop_expl_var$IP[1],2),"%")),
-          y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[2],2),"%"))) +
-     ggtitle(paste("IP-Microbiome",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-
-datos_comb1 <- data.frame(c(W,Z))
-
-p4<- ggplot(datos_comb1,aes(Met_comp2,Micro_comp1,label=variables_in_bacteria$Paciente))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC2 Metabolome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")),
-          y=c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) +
-     ggtitle(paste("Metabolome-MIcrobiome",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-datos_comb1 <- data.frame(c(X,Y))
-
-p5<- ggplot(datos_comb1,aes(C_comp2,IP_comp1,label=variables_in_bacteria$Paciente))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC2 Clinical",round(100*sgccda.res_genus$prop_expl_var$clinical_data[2],2),"%")),
-          y=c(paste("PC1 IP",round(100*sgccda.res_genus$prop_expl_var$IP[1],2),"%"))) +
-     ggtitle(paste("IP-Clincal",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-
-datos_comb1 <- data.frame(c(X,Z))
-
-p6<- ggplot(datos_comb1,aes(y=C_comp2,x=Met_comp1,label=variables_in_bacteria$Paciente))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim = c(min(datos_comb1[,2]),max(datos_comb1[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")),
-          y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) +
-     ggtitle(paste("Clinical-Metabolome",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-p6
-datos_comb1 <- data.frame(c(Y,W))
-
-
-
-datos_comb1 <- data.frame(c(X,Z))
-
-p6<- ggplot(datos_comb1,aes(y=C_comp2,x=Met_comp1,label=variables_in_bacteria$Paciente))+theme_article() +
-     geom_hline(yintercept = 0, color = "gray70") +
-     geom_vline(xintercept = 0, color = "gray70") +
-     geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) +
-     coord_cartesian(xlim =  c(min(datos_comb1[,2]),max(datos_comb1[,1]))) +
-     scale_fill_discrete(name = "Group")+
-     labs(x = c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")),
-          y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) +
-     ggtitle(paste("Clinical-Metabolome",sep=" "))+
-     theme(plot.title = element_text(hjust = 0.5),legend.position = "none") +
-     scale_color_manual(values=1:3)
-
-
-
-
-
-pttal <- ggarrange(p1,p2,p3,common.legend = T,legend = "bottom",nrow=1)
-annotate_figure(pttal, top = text_grob("Interaction Plot", 
-               color = "black", face = "bold", size = 14))
-pttal3 <- ggarrange(p4,p5,p6,common.legend = T,legend = "bottom",nrow=1)
-annotate_figure(pttal3, top = text_grob("Interaction Plot", 
-               color = "black", face = "bold", size = 14))
-
+Reduce(base::intersect, list(colnames(pcos.obese),colnames(ctrl.males.obese)))
 
 ```
 
 ```{r,fig.height=9,fig.width=9}
-p<-mixOmics::circosPlot(sgccda.res_genus,cutoff=0.6,size.variables=0.7,showIntraLinks=F)
+fn.contrib <- function(p,grupcon1,grupcon2){
+  p$variables <-rownames(p)
+  p.obj <-p[p[,"GroupContrib"]==grupcon1 & p[,paste0("Contrib.",grupcon2)]==T,c("variables","importance")]
+
+  return(p.obj)
+}
+mindis <- 100
+p<-plotLoadings(sgccda.res_genus,contrib = "max",block=1,plot=F,ndisplay = mindis,comp=2)
+q<-plotLoadings(sgccda.res_genus,contrib = "max",block=2,plot=F,ndisplay = mindis,comp = 2)
+r<-plotLoadings(sgccda.res_genus,contrib = "max",block=3,plot=F,ndisplay = mindis,comp = 2)
+s<-plotLoadings(sgccda.res_genus,contrib = "max",block=4,plot=F,ndisplay = mindis,comp = 2)
+
+
+(grupcon1. <- sort(unique(p$GroupContrib)))
+(grupcon2. <- sort(colnames(p)[grep("^[cig]",invert = T,ignore.case = T,colnames(p))]))
+
+grupos.con <-cbind(grupcon1.,grupcon2.)
+aux1<-vector(mode="list",length=6);names(aux1)<-grupcon1.
+aux2 <-vector(mode="list",length=6);names(aux2)<-grupcon1.
+aux3 <-vector(mode="list",length=6);names(aux3)<-grupcon1.
+aux4 <-vector(mode="list",length=6);names(aux4)<-grupcon1.
+
+  for(i in 1:6){
+  
+  aux1[[i]]<-fn.contrib(p,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux2[[i]]<-fn.contrib(q,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux3[[i]]<-fn.contrib(r,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+  aux4[[i]]<-fn.contrib(s,grupcon1 = grupos.con[i,1],grupcon2 = grupos.con[i,2])
+
+  }
+
+
+fn.exportmat <- function(Z,grupo,variables){
+  Z<-as.data.frame(Z)
+  Z.sub<-Z[rownames(Z)%in% grupo,variables]
+  if(is.null(dim(Z.sub))){
+    
+    Z.sub<-as.data.frame(Z.sub)
+    rownames(Z.sub)<-rownames(Z)[rownames(Z)%in% grupo]
+    Z.sub$pacientes <- rownames(Z.sub)
+    colnames(Z.sub)<-c(variables,"pacientes")
+  }else{
+    Z.sub<-as.data.frame(Z.sub)
+  }
+  
+  return(Z.sub)
+  
+  
+}
+
+grupos <- unique(variables_in_bacteria$interaccion)
+z <- data.frame(cimDiablo(sgccda.res_genus)$mat)
+list_comp1 <- vector(mode="list",length = 6)
+names(list_comp1)<-grupos
+aux.tmp<-list(aux1,aux2,aux3,aux4)
+for(l in 1:length(list_comp1)){
+  list.temp<-vector(mode="list",length=4)
+  sujetos <- variables_in_bacteria[variables_in_bacteria$interaccion==grupos[l],"Paciente"]
+  for(b in 1:4){
+    
+    variables <-aux.tmp[[b]][[l]][,"variables"]
+    variables<-variables[!is.na(variables)]
+    variables<-variables[variables %in% colnames(z)]
+    list.temp[[b]]<-fn.exportmat(z,sujetos,variables)
+  }
+list_comp1[[l]]<-list.temp
+}
+
+## Control Females
+ctrl.females.2 <-(do.call(bind_cols,list_comp1$`No Obese.Female`))
+ctrl.females.2<-as.matrix(ctrl.females.2[,grep("pacientes",colnames(ctrl.females.2),invert = T)])
+cim(ctrl.females.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.females.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.females.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
+# text(pos, p_format(pval))
+
+# Obese Females
+ctrl.females.obese.2 <-(do.call(bind_cols,list_comp1$Obese.Female))
+ctrl.females.obese.2<-as.matrix(ctrl.females.obese.2[,grep("pacientes",colnames(ctrl.females.obese.2),
+                                             invert = T)])
+cim(ctrl.females.obese.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.females.obese.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.females.obese.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
+
+
+# Male
+ctrl.males.2 <-(do.call(bind_cols,list_comp1$`No Obese.Male`))
+ctrl.males.2<-as.matrix(ctrl.males.2[,grep("pacientes",colnames(ctrl.males.2),
+                                             invert = T)])
+cim(ctrl.males.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.males.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.males.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
+
+# Male OBese
+ctrl.males.obese.2 <-(do.call(bind_cols,list_comp1$Obese.Male))
+ctrl.males.obese.2<-as.matrix(ctrl.males.obese.2[,grep("pacientes",colnames(ctrl.males.obese.2),
+                                             invert = T)])
+cim(ctrl.males.obese.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(ctrl.males.obese.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.005, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(ctrl.males.obese.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
+
+# pcos
+  pcos.2 <-(do.call(bind_cols,list_comp1$`No Obese.PCOS`))
+pcos.2<-as.matrix(pcos.2[,grep("pacientes",colnames(pcos.2),
+                                             invert = T)])
+cim(pcos.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(pcos.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(pcos.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
+
+
+# pcos obese
+  pcos.obese.2 <-(do.call(bind_cols,list_comp1$Obese.PCOS))
+pcos.obese.2<-as.matrix(pcos.obese.2[,grep("pacientes",colnames(pcos.obese.2),
+                                             invert = T)])
+cim(pcos.obese.2)
+
+p_format <- function(x, ndp=3)
+{
+  out <- format(round(as.numeric(x),ndp),ns=ndp,scientific=F,just="none")
+  ifelse(out<=0.05,"*", "")
+}
+# Plot
+
+# Get positions & plot formatted p-values
+pval <- psych::corr.test(pcos.obese.2, adjust="none")$p
+diag(pval)<-1
+w<-apply(pval<0.05, 1, any)
+pval<-pval[w,w]
+pos <- expand.grid(1:ncol(pval), ncol(pval):1)
+# lower tri
+micor<-cor(pcos.obese.2)
+
+corrplot::corrplot(micor[w,w])
+text(pos, p_format(pval),col = "white")
 ```
 
-```{r,fig.width=7,fig.height=7}
-mat <- cimDiablo(sgccda.res_genus,dist.method=c("euclidean","correlation"),size.legend = 0.6)$mat
-variables_in_bacteria$interaccion <- with(variables_in_bacteria,interaction(OBESE,GROUP))
-pcos.obe <- mat[variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.PCOS","Paciente"],]
-```
+
 
 
 ```{r}
-library(reshape2)
-mat.males <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.Male","Paciente"],])
-w<- apply(mat.males, 2, function(x) sum(abs(x)>1.2)>3)
-sub.males <-mat.males[,w]
+sujetos.comp <- list(pcos1=pcos.1,pcos2=pcos.2,
+                     pcoso1=pcos.obese.1,pcoso2=pcos.obese.2,
+                     females1=ctrl.females.1,females2=ctrl.females.2,
+                     femaleso1=ctrl.females.obese.1,femaleso2=ctrl.females.obese.2,
+                     males1=ctrl.males.1,males2=ctrl.males.2,
+                     maleso1=ctrl.males.obese.1,maleso2=ctrl.males.obese.2)
+names(sujetos.comp)
 
-sub.males$subjects <- rownames(mat.males)
-mat.males_melt <- melt(sub.males)
-p1<-ggplot(data=mat.males_melt,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white',size=3) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen healthy males subjects\n and correlation between variables")
-
-
-mat.males.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.Male","Paciente"],])
-w<- apply(mat.males.obese, 2, function(x) sum(abs(x)>1.2)>3)
-sub.males.obese <-mat.males.obese[,w]
-
-sub.males.obese$subjects <- rownames(mat.males.obese)
-mat.males_melt.obese <- melt(sub.males.obese)
-
-p2<-ggplot(data=mat.males_melt.obese,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white') + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen obese males subjects\n and correlation between variables")
-
-
-
-mat.females <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.Female","Paciente"],])
-w<- apply(mat.females, 2, function(x) sum(abs(x)>1.2)>5)
-sub.females <-mat.females[,w]
-
-sub.females$subjects <- rownames(sub.females)
-mat.females_melt <- melt(sub.females)
-
-p3<-ggplot(data=mat.females_melt,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white',size=2.5) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen healthy females subjects\n and correlation between variables")
-
-p3
-
-
-mat.females.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.Female","Paciente"],])
-w<- apply(mat.females.obese, 2, function(x) sum(abs(x)>1.2)>3)
-sub.females.obese <-mat.females.obese[,w]
-
-sub.females.obese$subjects <- rownames(sub.females.obese)
-mat.females_melt.obese <- melt(sub.females.obese)
-
-p4<-ggplot(data=mat.females_melt.obese,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white',size=2.5) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen obese females subjects\n and correlation between variables")
-
-
-
-
-
-mat.females.pcos <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.PCOS","Paciente"],])
-w<- apply(mat.females.pcos, 2, function(x) sum(abs(x)>1.2)>2)
-sub.females.pcos <-mat.females.pcos[,w]
-
-sub.females.pcos$subjects <- rownames(sub.females.pcos)
-mat.females_melt.pcos<- melt(sub.females.pcos)
-
-p5<-ggplot(data=mat.females_melt.pcos,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white',size=2) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen non obese PCOS females subjects\n and correlation between variables")
-
-
-
-
-mat.females.pcos.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.PCOS","Paciente"],])
-w<- apply(mat.females.pcos.obese, 2, function(x) sum(abs(x)>1.1)>3)
-sub.females.pcos.obese <-mat.females.pcos.obese[,w]
-
-sub.females.pcos.obese$subjects <- rownames(sub.females.pcos.obese)
-mat.females_melt.pcos.obese<- melt(sub.females.pcos.obese)
-
-p6<-ggplot(data=mat.females_melt.pcos.obese,
-       aes(x=variable, y=subjects, fill=value)) + geom_tile() +
-       geom_text(aes(label=round(value,1)), color='white',size=2) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen  obese PCOS females subjects\n and correlation between variables")
-
-p1
-p2
-p3
-p4
-p5
-p6
-
-```
-
-```{r}
+Reduce(base::intersect, list(colnames(sujetos.comp$pcos1),colnames(sujetos.comp$pcos2)))
 
 ```
 
 
 
-```{r}
-par(mfrow=c(2,2))
-barplot(colMeans(mat.males)[abs(colMeans(mat.males))>0.8],las=2,cex.names = 0.7,col="steelblue",main="Males Heatlhy")
+<!-- ```{r} -->
+<!-- p<-plotLoadings(sgccda.res_genus,contrib = "max",block=1,plot=F,method="mean",comp=1,ndisplay = 70) -->
+<!-- q<-plotLoadings(sgccda.res_genus,contrib = "max",block=2,plot=F,method="mean",comp=1,ndisplay = 70) -->
+<!-- r<-plotLoadings(sgccda.res_genus,contrib = "max",block=3,plot=F,method="mean",comp=1,ndisplay = 70) -->
+<!-- s<-plotLoadings(sgccda.res_genus,contrib = "max",block=4,plot=F,method="mean",comp=1.,ndisplay = 70) -->
 
-barplot(colMeans(mat.males.obese)[abs(colMeans(mat.males.obese))>0.8],las=2,cex.names = 0.7,col="steelblue",main="Males Obese")
+<!-- (grupcon1. <- sort(unique(p$GroupContrib))) -->
+<!-- (grupcon2. <- sort(colnames(p)[grep("^[cig]",invert = T,ignore.case = T,colnames(p))])) -->
+
+<!-- grupos.con <-cbind(grupcon1.,grupcon2.) -->
+
+<!-- lista_loads <- list(p,q,r,s) -->
+<!-- aux1 <- vector(mode = "list",length=4) -->
+<!-- block.name <-c("Clinical","IP","Metabolome","Microbiome") -->
+<!-- for(i in 1:length(lista_loads)){ -->
+
+<!--   aux1[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[1,1], -->
+<!--                         grupcon2 = grupos.con[1,2])+labs(x=block.name[i]) -->
+<!-- } -->
+
+<!-- plot_female <- ggarrange(aux1[[1]],aux1[[2]],aux1[[3]],aux1[[4]]) -->
+<!-- annotate_figure(plot_female, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+
+<!-- aux2 <- vector(mode = "list",length=4) -->
+<!-- for(i in 1:length(lista_loads)){ -->
+
+<!--   aux2[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[2,1], -->
+<!--                         grupcon2 = grupos.con[2,2])+labs(x=block.name[i]) -->
+<!-- } -->
+
+<!-- plot_female_obese <- ggarrange(aux2[[1]],aux2[[2]],aux2[[3]],aux2[[4]]) -->
+<!-- annotate_figure(plot_female_obese, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
 
 
-barplot(colMeans(mat.females)[abs(colMeans(mat.females))>1],las=2,cex.names = 0.7,col="steelblue",main="heatlhy females")
+<!-- aux3 <- vector(mode = "list",length=4) -->
+<!-- for(i in 1:length(lista_loads)){ -->
 
-barplot(colMeans(mat.females.obese
-)[abs(colMeans(mat.females.obese
-))>0.8],las=2,cex.names = 0.7,col="steelblue",main="obese females")
+<!--   aux3[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[3,1], -->
+<!--                         grupcon2 = grupos.con[3,2])+labs(x=block.name[i]) -->
+<!-- } -->
 
-pcos <- data.frame(colMeans(mat.females.pcos)[abs(colMeans(mat.females.pcos))>0.55])
-pcos$variables <- rownames(pcos)
-colnames(pcos)<-c("cantidad","variables")
-
-ggplot(pcos, aes(x=variables, y=cantidad)) + 
-  geom_bar(stat = "identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+labs(x="",y="")+ggtitle("non obese PCOS")
+<!-- plot_male <- ggarrange(aux3[[1]],aux3[[2]],aux3[[3]],aux3[[4]]) -->
+<!-- annotate_figure(plot_male, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
 
 
-pcos.obese <- data.frame(colMeans(mat.females.pcos.obese)[abs(colMeans(mat.females.pcos.obese))>0.6])
-pcos.obese$variables <- rownames(pcos.obese)
-colnames(pcos.obese)<-c("cantidad","variables")
 
-ggplot(pcos.obese, aes(x=variables, y=cantidad)) + 
-  geom_bar(stat = "identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+labs(x="",y="")+ggtitle("obese PCOS")
 
-```
 
-```{r,fig.height=9,fig.width=9}
-p<-mixOmics::circosPlot(sgccda.res_genus,cutoff=0.6,size.variables=0.7,showIntraLinks=F)
-```
+<!-- aux4 <- vector(mode = "list",length=4) -->
+<!-- for(i in 1:length(lista_loads)){ -->
 
-```{r}
-p
+<!--   aux4[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[4,1], -->
+<!--                         grupcon2 = grupos.con[4,2])+labs(x=block.name[i]) -->
+<!-- } -->
 
-```
+<!-- plot_male_obese <- ggarrange(aux4[[1]],aux4[[2]],aux4[[3]],aux4[[4]]) -->
+<!-- annotate_figure(plot_male_obese, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+
+
+<!-- aux5 <- vector(mode = "list",length=4) -->
+<!-- for(i in 1:length(lista_loads)){ -->
+
+<!--   aux5[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[5,1], -->
+<!--                         grupcon2 = grupos.con[5,2])+labs(x=block.name[i]) -->
+<!-- } -->
+
+<!-- plot_pcos <- ggarrange(aux5[[1]],aux5[[2]],aux5[[3]],aux5[[4]]) -->
+<!-- annotate_figure(plot_pcos, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+
+<!-- aux6 <- vector(mode = "list",length=4) -->
+<!-- for(i in 1:length(lista_loads)){ -->
+
+<!--   aux6[[i]]<-fn.contrib(lista_loads[[i]], -->
+<!--                         grupcon1 = grupos.con[6,1], -->
+<!--                         grupcon2 = grupos.con[6,2])+labs(x=block.name[i]) -->
+<!-- } -->
+
+<!-- plot_pcos_obese <- ggarrange(aux6[[1]],aux6[[2]],aux6[[3]],aux6[[4]]) -->
+<!-- annotate_figure(plot_pcos_obese, top = text_grob("All blocks-Variable contributions",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+
+
+
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- c_prop<-sgccda.res_genus$prop_expl_var$clinical_data -->
+<!-- ip_prop <- sgccda.res_genus$prop_expl_var$IP -->
+<!-- met_prop <- sgccda.res_genus$prop_expl_var$metabolome -->
+<!-- mic_prop <- sgccda.res_genus$prop_expl_var$microbiome -->
+<!-- Y_prop<-sgccda.res_genus$prop_expl_var$Y -->
+<!-- var.exp <- 100*data.frame(clinical=c_prop,ip=ip_prop,met=met_prop,mic=mic_prop,Y=Y_prop) -->
+<!-- var.exp$comps <-rownames(var.exp) -->
+<!-- p1<- ggplot(data=var.exp, aes(x=comps, y=clinical)) +  -->
+<!--     geom_bar(stat="identity",col="black",fill="darkblue")+ -->
+<!--     theme_article()+ -->
+<!--   labs(y="Clinical Data",x="")+ -->
+<!--   theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35))  -->
+
+<!-- p2<- ggplot(data=var.exp, aes(x=comps, y=ip)) +  -->
+<!--     geom_bar(stat="identity",col="black",fill="darkblue")+ -->
+<!--     theme_article()+ -->
+<!--   labs(y="IP Data",x="")+ -->
+<!--   theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35))  -->
+
+<!-- p3<- ggplot(data=var.exp, aes(x=comps, y=met)) +  -->
+<!--     geom_bar(stat="identity",col="black",fill="darkblue")+ -->
+<!--     theme_article()+ -->
+<!--   labs(y="Metabolome Data",x="")+ -->
+<!--   theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35))  -->
+
+<!-- p4<- ggplot(data=var.exp, aes(x=comps, y=mic)) +  -->
+<!--     geom_bar(stat="identity",col="black",fill="darkblue")+ -->
+<!--     theme_article()+ -->
+<!--   labs(y="Microbiome Data",x="")+ -->
+<!--   theme(axis.text=element_text(size=12,color = "black"))+coord_cartesian(ylim = c(-0,35))  -->
+
+
+
+<!-- var.expl.plot <-ggarrange(p1,p2,p3,p4) -->
+<!-- annotate_figure(var.expl.plot, top = text_grob("Explained Variation by Block (%)",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+
+<!-- c_prop<-sgccda.res_genus$prop_expl_var$clinical_data -->
+<!-- ip_prop <- sgccda.res_genus$prop_expl_var$IP -->
+<!-- met_prop <- sgccda.res_genus$prop_expl_var$metabolome -->
+<!-- mic_prop <- sgccda.res_genus$prop_expl_var$microbiome -->
+<!-- Y_prop<-sgccda.res_genus$prop_expl_var$Y -->
+<!-- round(rbind(c_prop,ip_prop,met_prop,mic_prop,Y_prop),2) -->
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- X <- data.frame(sgccda.res_genus$loadings$clinical_data) -->
+<!-- Y <- data.frame(sgccda.res_genus$loadings$IP) -->
+<!-- Z <- data.frame(sgccda.res_genus$loadings$metabolome) -->
+<!-- W <- data.frame(sgccda.res_genus$loadings$microbiome) -->
+<!-- # colnames(X) <-paste0("met",colnames(X)) -->
+<!-- # colnames(Y) <- paste0("micro",colnames(Y)) -->
+<!-- plot1 <- ggplot() +  -->
+<!--     geom_point(data = X,aes(comp1,comp2),label=rownames(X),color="blue") +  -->
+<!--   geom_text_repel(data=X,aes(comp1,comp2, -->
+<!--                              label=rownames(X)), -->
+<!--                   segment.size = 0.25, size = 2)+coord_cartesian(xlim = -->
+<!--                                                           c(-0.4,0.4), -->
+<!--                                                           ylim= c(-0.4,0.4))+theme_article()+geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") +labs(x="")+ggtitle("Clinical") -->
+
+
+<!-- plot2 <- ggplot()+geom_point(data = Y,aes(comp1,comp2),color='blue')+  -->
+<!--   geom_text_repel(data=Y,aes(comp1,comp2,label=rownames(Y)), -->
+<!--                   segment.size = 0.25, size = 3)+coord_cartesian(xlim = -->
+<!--                                                           c(-0.5,0.5), -->
+<!--                                                           ylim= c(-0.5,0.5))+theme_article()+geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + labs(x="",y="")+ggtitle("IP") -->
+<!-- plot3 <- ggplot()+geom_point(data = Z,aes(comp1,comp2),color='blue')+  -->
+<!--   geom_text_repel(data=Z,aes(comp1,comp2,label=rownames(Z)), -->
+<!--                   segment.size = 0.1, size =2)+coord_cartesian(xlim = -->
+<!--                                                           c(-0.2,0.2), -->
+<!--                                                           ylim= c(-0.3,0.3))+theme_article()+geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") +ggtitle("Metabolome") -->
+<!-- plot4 <- ggplot()+geom_point(data = W,aes(comp1,comp2),color='blue')+  -->
+<!--   geom_text_repel(data=W,aes(comp1,comp2,label=rownames(W)), -->
+<!--                   segment.size = 0.1, size = 3)+coord_cartesian(xlim = -->
+<!--                                                           c(-0.3,0.3), -->
+<!--                                                           ylim= c(-0.3,0.3))+theme_article()+geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + labs(y="")+ggtitle("Microbiome") -->
+<!-- loadsplot <- ggarrange(plot1,plot2,plot3,plot4) -->
+
+<!-- annotate_figure(loadsplot, top = text_grob("Loadings Plot",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- X<-data.frame(sgccda.res_genus$variates$clinical_data) -->
+<!-- colnames(X)<-paste0("C_",colnames(X)) -->
+<!-- Y<-data.frame(sgccda.res_genus$variates$IP) -->
+<!-- colnames(Y)<-paste0("IP_",colnames(Y)) -->
+<!-- Z <- data.frame(sgccda.res_genus$variates$metabolome) -->
+<!-- colnames(Z) <- paste0("Met_",colnames(Z)) -->
+<!-- W <- data.frame(sgccda.res_genus$variates$microbiome) -->
+<!-- colnames(W) <- paste0("Micro_",colnames(W)) -->
+
+
+
+
+<!-- datos_comb0 <- data.frame(c(X,W)) -->
+
+<!-- p1<- ggplot(datos_comb0,aes(C_comp2,Micro_comp1))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb0[,2]),max(datos_comb0[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC2 Clinical", -->
+<!--                       round(100*sgccda.res_genus$prop_expl_var$clinical_data[2],2),"%")), y=c(paste("PC1 Micro",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) + -->
+<!--      ggtitle(paste("Clinical-Microbiome ",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+
+
+
+<!-- datos_comb1 <- data.frame(c(Y,Z)) -->
+
+<!-- p2<- ggplot(datos_comb1,aes(IP_comp2,Met_comp1))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb1[,2]),max(datos_comb1[,2]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC2 IP", -->
+<!--                       round(100*sgccda.res_genus$prop_expl_var$IP[2],2),"%")), y=c(paste("PC1 Metabolome",round(100*sgccda.res_genus$prop_expl_var$metabolome[1],2),"%"))) + -->
+<!--      ggtitle(paste("IP-Metabolome ",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+<!-- datos_comb1 <- data.frame(c(Y,W)) -->
+
+<!-- p3<- ggplot(datos_comb1,aes(IP_comp1,Micro_comp2,label=variables_in_bacteria$Paciente))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC 1 IP",round(100*sgccda.res_genus$prop_expl_var$IP[1],2),"%")), -->
+<!--           y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[2],2),"%"))) + -->
+<!--      ggtitle(paste("IP-Microbiome",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+
+<!-- datos_comb1 <- data.frame(c(W,Z)) -->
+
+<!-- p4<- ggplot(datos_comb1,aes(Met_comp2,Micro_comp1,label=variables_in_bacteria$Paciente))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC2 Metabolome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")), -->
+<!--           y=c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) + -->
+<!--      ggtitle(paste("Metabolome-MIcrobiome",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+<!-- datos_comb1 <- data.frame(c(X,Y)) -->
+
+<!-- p5<- ggplot(datos_comb1,aes(C_comp2,IP_comp1,label=variables_in_bacteria$Paciente))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb1[,1]),max(datos_comb1[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC2 Clinical",round(100*sgccda.res_genus$prop_expl_var$clinical_data[2],2),"%")), -->
+<!--           y=c(paste("PC1 IP",round(100*sgccda.res_genus$prop_expl_var$IP[1],2),"%"))) + -->
+<!--      ggtitle(paste("IP-Clincal",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+
+<!-- datos_comb1 <- data.frame(c(X,Z)) -->
+
+<!-- p6<- ggplot(datos_comb1,aes(y=C_comp2,x=Met_comp1,label=variables_in_bacteria$Paciente))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim = c(min(datos_comb1[,2]),max(datos_comb1[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")), -->
+<!--           y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) + -->
+<!--      ggtitle(paste("Clinical-Metabolome",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+<!-- p6 -->
+<!-- datos_comb1 <- data.frame(c(Y,W)) -->
+
+
+
+<!-- datos_comb1 <- data.frame(c(X,Z)) -->
+
+<!-- p6<- ggplot(datos_comb1,aes(y=C_comp2,x=Met_comp1,label=variables_in_bacteria$Paciente))+theme_article() + -->
+<!--      geom_hline(yintercept = 0, color = "gray70") + -->
+<!--      geom_vline(xintercept = 0, color = "gray70") + -->
+<!--      geom_point(aes(color = Group,shape=Group2), alpha = 0.55, size = 3) + -->
+<!--      coord_cartesian(xlim =  c(min(datos_comb1[,2]),max(datos_comb1[,1]))) + -->
+<!--      scale_fill_discrete(name = "Group")+ -->
+<!--      labs(x = c(paste("PC1 Microbiome",round(100*sgccda.res_genus$prop_expl_var$metabolome[2],2),"%")), -->
+<!--           y=c(paste("PC2 Microbiome",round(100*sgccda.res_genus$prop_expl_var$microbiome[1],2),"%"))) + -->
+<!--      ggtitle(paste("Clinical-Metabolome",sep=" "))+ -->
+<!--      theme(plot.title = element_text(hjust = 0.5),legend.position = "none") + -->
+<!--      scale_color_manual(values=1:3) -->
+
+
+
+
+
+<!-- pttal <- ggarrange(p1,p2,p3,common.legend = T,legend = "bottom",nrow=1) -->
+<!-- annotate_figure(pttal, top = text_grob("Interaction Plot",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+<!-- pttal3 <- ggarrange(p4,p5,p6,common.legend = T,legend = "bottom",nrow=1) -->
+<!-- annotate_figure(pttal3, top = text_grob("Interaction Plot",  -->
+<!--                color = "black", face = "bold", size = 14)) -->
+
+
+<!-- ``` -->
+
+<!-- ```{r,fig.height=9,fig.width=9} -->
+<!-- p<-mixOmics::circosPlot(sgccda.res_genus,cutoff=0.6,size.variables=0.7,showIntraLinks=F) -->
+<!-- ``` -->
+
+<!-- ```{r,fig.width=7,fig.height=7} -->
+<!-- mat <- cimDiablo(sgccda.res_genus,dist.method=c("euclidean","correlation"),size.legend = 0.6)$mat -->
+<!-- variables_in_bacteria$interaccion <- with(variables_in_bacteria,interaction(OBESE,GROUP)) -->
+<!-- pcos.obe <- mat[variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.PCOS","Paciente"],] -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- library(reshape2) -->
+<!-- mat.males <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.Male","Paciente"],]) -->
+<!-- w<- apply(mat.males, 2, function(x) sum(abs(x)>1.2)>3) -->
+<!-- sub.males <-mat.males[,w] -->
+
+<!-- sub.males$subjects <- rownames(mat.males) -->
+<!-- mat.males_melt <- melt(sub.males) -->
+<!-- p1<-ggplot(data=mat.males_melt, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white',size=3) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen healthy males subjects\n and correlation between variables") -->
+
+
+<!-- mat.males.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.Male","Paciente"],]) -->
+<!-- w<- apply(mat.males.obese, 2, function(x) sum(abs(x)>1.2)>3) -->
+<!-- sub.males.obese <-mat.males.obese[,w] -->
+
+<!-- sub.males.obese$subjects <- rownames(mat.males.obese) -->
+<!-- mat.males_melt.obese <- melt(sub.males.obese) -->
+
+<!-- p2<-ggplot(data=mat.males_melt.obese, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white') + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen obese males subjects\n and correlation between variables") -->
+
+
+
+<!-- mat.females <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.Female","Paciente"],]) -->
+<!-- w<- apply(mat.females, 2, function(x) sum(abs(x)>1.2)>5) -->
+<!-- sub.females <-mat.females[,w] -->
+
+<!-- sub.females$subjects <- rownames(sub.females) -->
+<!-- mat.females_melt <- melt(sub.females) -->
+
+<!-- p3<-ggplot(data=mat.females_melt, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white',size=2.5) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen healthy females subjects\n and correlation between variables") -->
+
+<!-- p3 -->
+
+
+<!-- mat.females.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.Female","Paciente"],]) -->
+<!-- w<- apply(mat.females.obese, 2, function(x) sum(abs(x)>1.2)>3) -->
+<!-- sub.females.obese <-mat.females.obese[,w] -->
+
+<!-- sub.females.obese$subjects <- rownames(sub.females.obese) -->
+<!-- mat.females_melt.obese <- melt(sub.females.obese) -->
+
+<!-- p4<-ggplot(data=mat.females_melt.obese, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white',size=2.5) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen obese females subjects\n and correlation between variables") -->
+
+
+
+
+
+<!-- mat.females.pcos <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="No Obese.PCOS","Paciente"],]) -->
+<!-- w<- apply(mat.females.pcos, 2, function(x) sum(abs(x)>1.2)>2) -->
+<!-- sub.females.pcos <-mat.females.pcos[,w] -->
+
+<!-- sub.females.pcos$subjects <- rownames(sub.females.pcos) -->
+<!-- mat.females_melt.pcos<- melt(sub.females.pcos) -->
+
+<!-- p5<-ggplot(data=mat.females_melt.pcos, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white',size=2) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen non obese PCOS females subjects\n and correlation between variables") -->
+
+
+
+
+<!-- mat.females.pcos.obese <- data.frame(mat[rownames(mat) %in% variables_in_bacteria[variables_in_bacteria$interaccion=="Obese.PCOS","Paciente"],]) -->
+<!-- w<- apply(mat.females.pcos.obese, 2, function(x) sum(abs(x)>1.1)>3) -->
+<!-- sub.females.pcos.obese <-mat.females.pcos.obese[,w] -->
+
+<!-- sub.females.pcos.obese$subjects <- rownames(sub.females.pcos.obese) -->
+<!-- mat.females_melt.pcos.obese<- melt(sub.females.pcos.obese) -->
+
+<!-- p6<-ggplot(data=mat.females_melt.pcos.obese, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile() + -->
+<!--        geom_text(aes(label=round(value,1)), color='white',size=2) + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("Euclidean distance bwteen  obese PCOS females subjects\n and correlation between variables") -->
+
+<!-- p1 -->
+<!-- p2 -->
+<!-- p3 -->
+<!-- p4 -->
+<!-- p5 -->
+<!-- p6 -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- par(mfrow=c(2,2)) -->
+<!-- barplot(colMeans(mat.males)[abs(colMeans(mat.males))>0.8],las=2,cex.names = 0.7,col="steelblue",main="Males Heatlhy") -->
+
+<!-- barplot(colMeans(mat.males.obese)[abs(colMeans(mat.males.obese))>0.8],las=2,cex.names = 0.7,col="steelblue",main="Males Obese") -->
+
+
+<!-- barplot(colMeans(mat.females)[abs(colMeans(mat.females))>1],las=2,cex.names = 0.7,col="steelblue",main="heatlhy females") -->
+
+<!-- barplot(colMeans(mat.females.obese -->
+<!-- )[abs(colMeans(mat.females.obese -->
+<!-- ))>0.8],las=2,cex.names = 0.7,col="steelblue",main="obese females") -->
+
+<!-- pcos <- data.frame(colMeans(mat.females.pcos)[abs(colMeans(mat.females.pcos))>0.55]) -->
+<!-- pcos$variables <- rownames(pcos) -->
+<!-- colnames(pcos)<-c("cantidad","variables") -->
+
+<!-- ggplot(pcos, aes(x=variables, y=cantidad)) +  -->
+<!--   geom_bar(stat = "identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+labs(x="",y="")+ggtitle("non obese PCOS") -->
+
+
+<!-- pcos.obese <- data.frame(colMeans(mat.females.pcos.obese)[abs(colMeans(mat.females.pcos.obese))>0.6]) -->
+<!-- pcos.obese$variables <- rownames(pcos.obese) -->
+<!-- colnames(pcos.obese)<-c("cantidad","variables") -->
+
+<!-- ggplot(pcos.obese, aes(x=variables, y=cantidad)) +  -->
+<!--   geom_bar(stat = "identity")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+labs(x="",y="")+ggtitle("obese PCOS") -->
+
+<!-- ``` -->
+
+<!-- ```{r,fig.height=9,fig.width=9} -->
+<!-- p<-mixOmics::circosPlot(sgccda.res_genus,cutoff=0.6,size.variables=0.7,showIntraLinks=F) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- p.tmp <- p[,grep("clinical$",colnames(p),invert = F)] -->
+<!-- p.clin <- p.tmp[grep("_[GLP0]$",rownames(p.tmp),invert = T),] -->
+
+<!-- w<-apply(p.clin, 2, function(x) sum(abs(x)>0.4)>10) -->
+<!-- csa <-p.clin[,w] -->
+<!-- w2 <- apply(csa, 1, function(x) sum(abs(x)>0.4)>10) -->
+<!-- csa2 <-data.frame(csa[w2,]) -->
+
+<!-- csa2$subjects <- rownames(csa2) -->
+<!-- csa2.melt<- melt(csa2) -->
+
+
+<!-- ggplot(data=csa2.melt, -->
+<!--        aes(x=variable, y=subjects, fill=value)) + geom_tile()  + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("General correlation between clinical variables and other blocks") -->
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- p.tmp <- p -->
+<!-- p.tmp <- p.tmp[grep("_[GLP]0$",rownames(p.tmp),invert = T),] -->
+<!-- p.clin <- p.tmp[grep("_clinical$",rownames(p.tmp),invert = T),] -->
+<!-- p.clin <- p.clin[grep("_0$",rownames(p.clin),invert = T),] -->
+
+<!-- w<-apply(p.clin, 1, function(x) sum(abs(x)>0.7)>1) -->
+<!-- csa <-p.clin[w,] -->
+<!-- csa -->
+<!-- # csa2 <-data.frame(csa[w2,]) -->
+<!-- #  -->
+<!-- # csa2$subjects <- rownames(csa2) -->
+<!-- # csa2.melt<- melt(csa2) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # ggplot(data=csa2.melt, -->
+<!-- #        aes(x=variable, y=subjects, fill=value)) + geom_tile()  + theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ggtitle("General correlation between clinical variables and other blocks") -->
+<!-- ``` -->
 

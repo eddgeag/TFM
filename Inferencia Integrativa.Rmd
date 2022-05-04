@@ -1,0 +1,759 @@
+---
+title: Integration of omics and clinical data of the hormonal, metabolic, inflammatory,
+  and oxidative response in the different macronutrients of the diet
+author: "Edmond Geraud"
+subtitle: '`r params$subtitulo`'
+date: '`r format(Sys.Date(),"%e de %B, %Y")`' 
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: true
+  html_document:
+    toc: true
+    toc_depth: 2
+header-includes:
+  - \usepackage[english]{babel}
+params:
+  
+  file_IP: Integromics_IPmarkers.xlsx
+  file_metabolome: Integromics_Metabolome.xlsx
+  file_general: Integromics_1.xlsx
+  file_microbiota : integromics_microbiota.xlsx
+  folder.data: ../../datos
+  subtitulo: FINAL RESULTS
+geometry: margin=2cm
+---
+```{r setup, include=FALSE}
+require(knitr)
+# include this code chunk as-is to set options
+opts_chunk$set(comment = NA, prompt = TRUE, tidy = T, 
+               fig.width = 7, fig.height = 7,echo = TRUE, 
+               message = FALSE, warning = FALSE, cache=TRUE, fig_caption = TRUE)
+Sys.setlocale("LC_TIME", "C")
+```
+
+## Load the libraries
+
+```{r libraries}
+
+list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2","ggcorrplot","corrplot","rela","ggrepel","factoextra","chemometrics","sparsepca","vegan","ca","ade4","pls","OmicsPLS")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])] ## check for packages not installed 
+if(length(new.packages)) install.packages(new.packages) ## install packages if necessary
+res<-unlist(lapply(list.of.packages, require,character.only = T)) ## load packages needed for the session
+# if(any(res==F)){
+  list.of.packages[which(res==F)]  ## show those package if you have troubles to install.
+
+
+list.of.bioc.packages <- c("phyloseq","pcaMethods","ropls","mixOmics","limma","DESeq2")
+new.packages.bioc <- list.of.packages[!(list.of.bioc.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages.bioc)) BiocManager::install(new.packages.bioc)
+res.bioc <- unlist(lapply(list.of.bioc.packages, require,character.only = T)) 
+if(any(res.bioc==F)){
+  list.of.packages[which(res.bioc==F)]  ## show those package if you have troubles to install.
+}
+```
+
+
+# Functions for loading data (microbiome)
+
+```{r}
+
+fn.discriminacion <- function(posthoc.df){
+  nombre.variable <- posthoc.df$nombre_variable
+  posthoc_df<-posthoc.df$df
+  variable.df<-posthoc.df$variable
+  valores.ajustados <- posthoc_df[,"p.adj"]
+  interaccion <- unique(as.vector(as.matrix(posthoc_df[,2:3])))
+  combinacion <- combn(interaccion,length(interaccion)-1)
+  cual.falta <-  interaccion[apply(combinacion, 2, 
+                     function(x) which(!unique(as.vector(combinacion)) %in% x))]
+  
+  lista_interaccion <- vector(mode="list",length=length(interaccion))
+  names(lista_interaccion)<- paste0(cual.falta,"_","interaccion")
+  for(comb_i in 1:length(lista_interaccion)){
+    
+    lista_interaccion[[names(lista_interaccion)[comb_i]]]<-cbind(rep(cual.falta[comb_i],length(lista_interaccion)-1),combinacion[,comb_i])
+    
+  }
+  
+  X <- posthoc_df[,2:3]
+  x1<- t(apply(X, 1, sort))
+  lista_res <- vector(mode="list",length=length(interaccion))
+  names(lista_res)<-names(lista_interaccion)
+  for(l in 1:length(lista_interaccion)){
+    
+    Y<-lista_interaccion[[names(lista_interaccion)[l]]]
+    y1<-t(apply(Y, 1, sort))
+    w.match <-match(do.call(paste,
+                          as.data.frame(y1)),
+                          do.call(paste, as.data.frame(x1)))
+    
+    lista_res[[names(lista_res)[l]]]<-posthoc_df[w.match,]
+    
+  }
+
+  condicion<-unlist(lapply(lista_res, function(x) all(x[,"p.adj"]<0.05)))
+  condicion.which.is.not.nan <- condicion[!is.na(condicion)]
+  if(any(condicion.which.is.not.nan)){
+    
+
+    significante <-lista_res[which(unlist(lapply(lista_res, function(x) all(x[,"p.adj"]<0.05)))==T)]
+    significante<-do.call("bind_rows",significante)
+    significante<-unique(significante[complete.cases(significante),])
+    interpretacion <-"Se discrimina"
+    
+  }else{
+    
+    significante <- do.call("bind_rows",lista_res)
+    significante<-unique(significante[complete.cases(significante),])
+    interpretacion <-"NO se discrimina"
+  }
+
+ return(list(resultado=significante,interpretacion=interpretacion))
+  
+}
+
+
+
+fn.decidetest <- function(X,fac){
+
+  homogeneidad <- car::leveneTest(X,fac)[[3]][1]
+  normalidad <- shapiro.test(X)$p.value
+
+  return(c(homogeneidad=homogeneidad,normalidad=normalidad))
+
+
+}
+DWin <- function(x) {diff(range(x)) < .Machine$double.eps ^ 0.5}
+box.group <- function(X,Y){dim(boxplot(X~Y,plot=F)$stats)[2]==length(levels(Y))}
+fn.signif <- function(lista_bloques){
+  ## lista_bloques es una lista que tiene las compoentes principales
+  which.is.factor <- which(lapply(lista_bloques,is.factor)==T)
+  
+  which.is.not.factor <- which(lapply(lista_bloques,is.factor)==F)
+  
+  factor_variables <- lista_bloques[which.is.factor]
+
+  datos.factor <- as.data.frame(do.call("bind_cols",factor_variables))
+
+  
+  which.is.data.frame<-unlist(lapply(lista_bloques[which.is.not.factor], is.data.frame))
+  
+  
+  
+  if(!any(which.is.data.frame)|| is.null(unlist(lapply(lista_bloques[which.is.not.factor],names)))){
+    
+    for(i in which.is.not.factor){
+
+    bloque_i<-data.frame(lista_bloques[[names(lista_bloques)[i]]])
+    colnames(bloque_i)<-paste0(names(lista_bloques)[i],"_",1:dim(bloque_i)[2])
+    lista_bloques[[names(lista_bloques)[i]]]<-bloque_i
+    
+    }
+    datos <- do.call(bind_cols,list(lista_bloques[which.is.not.factor]))
+  }
+  
+  datos<-datos[,-which(apply(datos, 2, DWin)==T)]
+  nombres.factores <-  names(factor_variables)
+  
+  bloques.n <- ncol(datos)
+
+  which.factor.2.levels <- which(unlist(lapply(factor_variables,function(x) length(levels(x))))<3)
+  which.factor.3orMore.levels <-which(unlist(lapply(factor_variables,function(x) length(levels(x))))>2)
+
+
+  #Primero hacemos test por componente univariante
+  res.dicotonomica <- data.frame(matrix(NA,nrow=length(which.factor.2.levels)*dim(datos)[2],ncol = 2))
+  colnames(res.dicotonomica) <- c("p-value","tipo-test")
+  k<-0
+  nombre.test <- vector(mode = "character",length=length(which.factor.2.levels)*dim(datos)[2])
+  for(i in 1:length(which.factor.2.levels)){
+
+    u<-which.factor.2.levels[i]
+    Y <- datos.factor[,u]
+
+    for(j in 1:ncol(datos)){
+      
+      k<-k+1
+
+      X <- datos[,j]
+        if(box.group(X,Y)==F){
+        message(paste("Componente ",colnames(datos)[j]," no tiene todos los niveles"))
+        next
+        }
+
+      datos_j <- data.frame(X=X,Y=Y)
+        
+      colnames(datos_j) <- c(colnames(datos)[j],colnames(datos.factor)[u])
+      frmla <- as.formula(paste0(colnames(datos)[j],"~",colnames(datos.factor[u])))
+      nombre.componente_j <- colnames(datos)[j]
+      decision.homo.normalidad <- fn.decidetest(X,Y)
+      homogeneidad<- decision.homo.normalidad[1]
+      normalidad <- decision.homo.normalidad[2]
+
+      if(all(boxplot(frmla,data=datos_j,plot=F)$stats==0)){
+
+          res.tmp <- "NO HAY VALORES EN LOS GRUPOS"
+          tipo.test <-"NO HAY"
+
+      }else if((normalidad<0.05 && homogeneidad<0.05)||(normalidad<0.05 && homogeneidad>0.05)){
+
+        res.tmp <- wilcox.test(frmla,data=datos_j)$p.value
+        tipo.test <- "Wilcox Test"
+
+      }else if(normalidad>0.05 && homogeneidad<0.05){
+        res.tmp <- t.test(frmla,data=datos_j,var.equal=F)$p.value
+        tipo.test <- "t test WELCH"
+      }else if(normalidad>0.05 && homogeneidad>0.05){
+        res.tmp <- t.test(frmla,data=datos_j,var.equal=T)$p.value
+        tipo.test <- "classic t.test"
+      }else{
+        print(c(normalidad,homogeneidad))
+      }
+      
+      res.dicotonomica[k,]<-c(res.tmp,tipo.test)
+      nombre.test_i<- paste(colnames(datos_j),collapse = "_")
+      nombre.test[k]<-nombre.test_i
+    }
+
+
+  }
+
+
+  rownames(res.dicotonomica)<-nombre.test
+  lista.res <- vector(mode="list",length = length(which.factor.3orMore.levels)*dim(datos)[2])
+  nombres.test <- vector(mode="character",length = 1)
+
+  k<-0
+    nombre.test <- vector(mode = "character",length=length(which.factor.2.levels)*dim(datos)[2])
+
+  for(m in which.factor.3orMore.levels){
+    
+      Y<-datos.factor[,m]
+
+      for(j in 1:ncol(datos)){
+        k<-k+1
+        X<- datos[,j]
+        
+        datos_j <- data.frame(X=X,Y=Y)
+        
+        colnames(datos_j) <- c(colnames(datos)[j],colnames(datos.factor)[m])
+
+      if(box.group(X,Y)==F){
+        message(paste("Componente ",colnames(datos)[j]," no tiene todos los niveles"))
+        next
+      }
+        decision.homo.normalidad <- fn.decidetest(X,Y)
+
+        homogeneidad <- decision.homo.normalidad[1]
+
+        normalidad <- decision.homo.normalidad[2]
+
+        frmla <- as.formula(paste0(colnames(datos)[j],"~",colnames(datos.factor[m])))
+        
+        mdl<-aov(frmla,data=datos_j)
+        
+        if((normalidad<0.05 || homogeneidad<0.05 ||shapiro.test(residuals(mdl))$p.value<0.05)){
+              krstest.pvalor <- kruskal.test(frmla,data=datos_j)$p.value
+             if(krstest.pvalor<0.05){
+               
+              
+              post_hoc<-data.frame(rstatix::dunn_test(data=datos_j,formula = frmla
+                                                      ,p.adjust.method = "fdr"))
+              post_hoc.list <- list(df=post_hoc,
+                                          variable=X,
+                                          nombre_variable=colnames(datos)[j])
+
+       significante.list<-fn.discriminacion(posthoc.df = post_hoc.list)
+
+          tipo.test <- "Kruskal-Wallis"
+          pvalor.tipo <- krstest.pvalor
+          }else{
+          res.tmp2 <- "No hay resultados significantes"
+          res.tmp <- "No hay diferencias entre grupos"
+          tipo.test <- "kruskal-wallis"
+          pvalor.tipo<- krstest.pvalor
+
+          }
+        }
+        else if((normalidad>0.05 && homogeneidad>0.05)){
+          
+          aov.pvalor <- summary(mdl)[[1]][1,5]
+          if(aov.pvalor<0.05){
+            
+              post_hoc<-data.frame(rstatix::games_howell_test(data=datos_j,formula = frmla))
+              post_hoc.list <- list(df=post_hoc,
+                                          variable=X,
+                                          factor=Y,
+                                          nombre_variable=colnames(datos)[j],
+                                          nombre_factor =colnames(datos.factor)[m])
+
+            significante.list<-fn.discriminacion(posthoc.df = post_hoc.list)
+          tipo.test <- "ANOVA"
+          pvalor.tipo <- aov.pvalor
+          }else{
+          res.tmp <- "No hay diferencias entre grupos"
+          res.tmp2 <- "No hay resultados"
+          tipo.test <- "ANOVA"
+          pvalor.tipo <- aov.pvalor
+          }
+      }
+
+
+      lista.res[[k]]<-list(resultado=res.tmp,tipo.test=tipo.test,pvalor=pvalor.tipo,significante=significante.list$resultado,interpretacion=significante.list$interpretacion)
+      nombre.test_i<- paste(colnames(datos_j),collapse = "_")
+      nombre.test[k]<-nombre.test_i
+
+      }
+
+
+
+  }
+
+  names(lista.res)<-nombre.test
+  resultado.analisis <- list(Variables_Dicotonomicas=res.dicotonomica,Variables_multiple=lista.res)
+  
+  
+  return(resultado.analisis)
+  }
+  
+proces_bacteria <- function(datos,tipo){
+
+  Order <- bacteria_phylum.abs$Order
+  variables_in_bacteria <- general_data[general_data$Orden %in% Order , ]
+  Sample<-variables_in_bacteria$Paciente
+
+
+  if(tipo=="genera"){
+
+    Order <- Order
+
+    X <- datos[-1,-1]
+    X<-apply(X,2,as.numeric)
+    colnames(X) <- datos[1,2:ncol(datos)]
+    rownames(X) <- Sample
+    X.rel <- 100*X/rowSums(X)
+
+
+  } else if(tipo=="phylum"){
+
+    X <- datos[,-c(1:2)]
+    colnames(X) <- colnames(datos)[3:ncol(datos)]
+    rownames(X) <- Sample
+    X.rel<-100*X/rowSums(X)
+  }
+
+  GROUP <-variables_in_bacteria$GROUP
+  SEX <- variables_in_bacteria$SEX
+  OBESE<- variables_in_bacteria$OBESE
+
+  X<-as.data.frame(X)
+  X.rel<-as.data.frame(X.rel)
+
+  X$GROUP<-GROUP
+  X$SEX<-SEX
+  X$OBESE<-OBESE
+
+
+  X.rel$GROUP<-GROUP
+  X.rel$SEX<-SEX
+  X.rel$OBESE<-OBESE
+
+  return(list(abs=X,rel=X.rel))
+
+}
+
+
+low.count.removal = function(
+                        data, # OTU count data frame of size n (sample) x p (OTU)
+                        percent=0.01 # cutoff chosen
+                        ){
+    keep.otu = which(colSums(data)*100/(sum(colSums(data))) > percent)
+    data.filter = data[,keep.otu]
+    return(list(data.filter = data.filter, keep.otu = keep.otu))
+}
+
+relative.fn <-function(data){
+  
+  return(100*data/rowSums(data))
+  
+}
+
+
+```
+
+
+# Load the data
+
+## Clinical data.
+
+```{r}
+general_data <- read.xlsx(file.path(params$folder.data,params$file_general),sheetIndex =1)
+general_data$SEX <- factor(general_data$SEX, levels = c(0, 2), labels = c("Female", "Male"))
+general_data$OBESE <- factor(general_data$OBESE, levels = c(0, 1), labels = c("No Obese", "Obese"))
+general_data$GROUP <- factor(general_data$GROUP, levels = c(0, 1, 2), labels = c("Female",  "PCOS", "Male"))
+```
+
+## IP data.
+
+```{r}
+IP_file<-file.path(params$folder.data,file=params$file_IP) ## file path of the data
+IP.tmp<-read.xlsx(IP_file,sheetIndex = 1)
+IP<-IP.tmp[,-7] # remove the missin values column
+IP$SEX <- factor(IP$SEX,levels=c(0,2),labels = c("Female","Male"))
+IP$OBESE <- factor(IP$OBESE,levels=c(0,1),labels = c("No Obese","Obese"))
+IP$GROUP <- factor(IP$GROUP,levels=c(0,1,2),labels = c("Female","PCOS","Male"))
+```
+
+
+## Metabolome data
+
+```{r}
+metabolome_file<-file.path(params$folder.data,file=params$file_metabolome) ## file path of the data
+metabolome.tmp<-read.xlsx(metabolome_file,sheetIndex = 1) # read the data
+metabolites_name <- read.xlsx(metabolome_file,sheetIndex = 2)$Metabolitos # read the names of the metabolites
+any(is.na(metabolome.tmp)) # there is a row of missing values.
+metabolome<-metabolome.tmp[-nrow(metabolome.tmp),] ## remove the missing value row
+metabolome$GROUP<-general_data$GROUP ## add GROUP variable 
+metabolome$OBESE <- general_data$OBESE ## add OBESE variables.
+```
+
+## Microbiome data.
+
+```{r}
+bacteria_phylum.abs <- as.data.frame(read.xlsx(file.path(params$folder.data,params$file_microbiota), sheetIndex = 1))
+bacteria_genera.abs <- as.data.frame(t(read.xlsx(file.path(params$folder.data,params$file_microbiota), sheetIndex = 3)))
+phylum.list <- proces_bacteria(bacteria_phylum.abs,tipo="phylum")
+genera.list <- proces_bacteria(bacteria_genera.abs,tipo="genera")
+
+phylum.abs <- phylum.list$abs;phylum.rel<-phylum.list$rel
+genera.abs <- genera.list$abs;genera.rel<-genera.list$rel
+```
+
+
+# Preprocess data according to the microbiome.
+
+Because we have less subjects on the microbiome, and we have phylum and genera with variables with no records across all samples, we have to clean that.
+
+Furthermore, we have to take care only the basal levels across all blocks. Also we have to clean the data on the metabolome, IP for repeated variables.
+
+```{r}
+variables_in_bacteria <- general_data[general_data$Orden %in% bacteria_phylum.abs$Order, ]
+```
+
+Because, we only take care of the GROUP, and OBESE variables on the analysis, we can get rid off this variables and store them apart in a new object. Furthermore, we have to have the same names for the rows, so let's keep it in another object.
+
+```{r}
+sujetos <- variables_in_bacteria$Paciente
+GROUP <- variables_in_bacteria$GROUP
+OBESE <- variables_in_bacteria$OBESE
+interaccion <-with(variables_in_bacteria,interaction(GROUP,OBESE))
+```
+
+## Clinical data.
+
+**NOTE we are going to include also on both levels of integration body measures**
+We exclude ISI because it is measured after the load of glucose, the mean values, to exclude redundancy of the data, ant the postprandial levels. 
+
+```{r}
+sujetos <- variables_in_bacteria$Paciente
+Clin.tmp <- variables_in_bacteria[,-c(1,2,3,4,5)] # get rid off orden, paciente, sex, group and obese
+auc_clin <- colnames(Clin.tmp)[grep("AUC",colnames(Clin.tmp))]
+mean_basal_clin<-colnames(Clin.tmp)[grep("_B$",colnames(Clin.tmp))]
+sog <- colnames(Clin.tmp)[grep("^SO[GLP]",colnames(Clin.tmp))]
+variables_clin <- colnames(Clin.tmp)
+testosterona <-colnames(Clin.tmp)[grep("TEST",colnames(Clin.tmp))]
+interr<-colnames(Clin.tmp)[grep("interaccion",colnames(Clin.tmp))]
+ratio <- colnames(Clin.tmp)[grep("Ratio",colnames(Clin.tmp))]
+w<-c(which(variables_clin %in% auc_clin),which(variables_clin %in% mean_basal_clin),which(variables_clin %in% sog),which(variables_clin %in% testosterona),
+which(variables_clin %in% interr),which(variables_clin %in% ratio))
+Clin <- Clin.tmp[,-w] 
+rownames(Clin) <- sujetos
+colnames(Clin)
+```
+
+
+## IP data
+
+```{r}
+IP.tmp <- IP[IP$Paciente %in% variables_in_bacteria$Paciente,]
+redundant_variables <- c("Orden","Paciente","SEX","GROUP","OBESE","BMI")
+variables_ip <- colnames(IP.tmp)
+auc_ip <- variables_ip[grep("AUC",variables_ip)]
+mean_ip <- variables_ip[grep("_0$",variables_ip)]
+w <- c(which(variables_ip %in% redundant_variables),which(variables_ip %in% auc_ip),which(variables_ip %in% mean_ip))
+IP.basal <- IP.tmp[,-w]
+rownames(IP.basal) <- sujetos
+```
+
+## Metabolome data.
+
+```{r}
+metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
+redundant_data_meta <- c("Order","Sample","GROUP","OBESE")
+variables_meta <- colnames(metabolome.basal.tmp)
+mean_meta <- variables_meta[grep("_[GLP]0$",variables_meta)]
+auc_meta <- variables_meta[grep("AU[CG]",variables_meta)]
+w <- c(which(variables_meta %in% redundant_data_meta),which(variables_meta %in% mean_meta),which(variables_meta %in% auc_meta))
+metabolome.basal <- metabolome.basal.tmp[,-w]
+rownames(metabolome.basal) <- sujetos
+colnames(metabolome.basal)
+```
+
+## Microbiome data.
+
+### Phylum.
+
+```{r}
+phylum.abs.tmp <- phylum.abs
+redundant_data_ph <- c("GROUP","SEX","OBESE")
+phylum.tmp <- phylum.abs.tmp[,-c(ncol(phylum.abs.tmp)-2,ncol(phylum.abs.tmp)-1,ncol(phylum.abs.tmp))]
+phylum <- phylum.tmp[,colSums(phylum.tmp)>0]
+rownames(phylum) <- sujetos
+## removal of unidentified phyla
+phylum<-phylum[,-grep("^ud",colnames(phylum))]
+
+colnames(phylum)
+```
+
+### Genus
+
+```{r}
+genera.abs.tmp <- genera.abs
+redundant_data_ph <- c("GROUP","SEX","OBESE")
+genus.tmp.tmp <- genera.abs.tmp[,-c(ncol(genera.abs.tmp)-2,ncol(genera.abs.tmp)-1,ncol(genera.abs.tmp))]
+genus <- genus.tmp.tmp[,colSums(genus.tmp.tmp)>0]
+rownames(genus) <- sujetos
+## removal of genus unidentified
+
+genus<-genus[,-grep("^ud-",colnames(genus))]
+colnames(genus)
+```
+
+
+## Pretreatment of microbiome data.
+
+```{r}
+genus.offset<-genus+1
+phylum.offset<-phylum+1
+sum(which(genus.offset == 0))
+
+
+result.filter.genus <- low.count.removal(genus.offset, percent=0.001)
+result.filter.phylum<- low.count.removal(phylum.offset, percent=0.001)
+
+genus.filter <- result.filter.genus$data.filter
+phylum.filter <- result.filter.phylum$data.filter
+
+# length(result.filter$keep.otu) 
+lib.size.genus <- apply(genus.filter, 1, sum)
+lib.size.phylum <- apply(phylum.filter,1,sum)
+par(mfrow=c(1,2))
+barplot(lib.size.genus)
+barplot(lib.size.phylum)
+
+
+genus.clr.tmp <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 0)
+genus.rel <- relative.fn(genus)
+
+
+phylum.clr.tmp <- logratio.transfo(as.matrix(phylum.filter), logratio = 'CLR', offset = 0) 
+phylum.rel.tmp <- relative.fn(phylum)
+```
+
+```{r}
+interaccion <- interaction(variables_in_bacteria$GROUP,variables_in_bacteria$OBESE)
+variables_in_bacteria$interaccion <- interaccion
+grupo <-levels(interaccion)
+w<-vector(mode="list",length=6)
+names(w)<-levels(interaccion)
+for(i in 1:6){
+ w[[names(w)[i]]]<-which(apply(as.matrix(phylum.clr.tmp[
+  rownames(phylum.clr.tmp)%in%
+    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
+}
+
+w2<-vector(mode="list",length=6)
+names(w2)<-levels(interaccion)
+for(i in 1:6){
+ w2[[names(w2)[i]]]<-which(apply(as.matrix(phylum.clr.tmp[
+  rownames(phylum.clr.tmp)%in%
+    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
+  }
+
+w3<-lapply(w2, names)
+phylum.clr<-phylum.clr.tmp[,Reduce(intersect,w3)]
+
+interaccion <- interaction(variables_in_bacteria$GROUP,variables_in_bacteria$OBESE)
+variables_in_bacteria$interaccion <- interaccion
+grupo <-levels(interaccion)
+w<-vector(mode="list",length=6)
+names(w)<-levels(interaccion)
+for(i in 1:6){
+ w[[names(w)[i]]]<-which(apply(as.matrix(genus.clr.tmp[
+  rownames(genus.clr.tmp)%in%
+    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
+}
+
+w2<-vector(mode="list",length=6)
+names(w2)<-levels(interaccion)
+for(i in 1:6){
+ w2[[names(w2)[i]]]<-which(apply(as.matrix(genus.clr.tmp[
+  rownames(genus.clr.tmp)%in%
+    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
+  }
+
+w3<-lapply(w2, names)
+genus.clr<-genus.clr.tmp[,Reduce(intersect,w3)]
+```
+
+
+
+```{r}
+# names(w2)<-levels(interaccion)
+# for(i in 1:6){
+#  w2[[names(w2)[i]]]<-which(apply(as.matrix(genera.abs[
+#   rownames(genera.abs)%in%
+#     variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],-c(grep("^ud-",colnames(genera.abs)),285,284,283)]),2,function(x) sum(x)>0))
+# }
+
+```
+
+
+
+# Vamos a volver a analizar separadamente metaboloma y microbioma (genero)
+
+```{r}
+
+datos <- list(clinical_data = as.matrix(Clin),
+              IP =as.matrix(IP.basal),
+              metabolome = as.matrix(metabolome.basal),
+              microbiome = scale(as.matrix(phylum.clr)))
+
+```
+
+## Empezamos con el metaboloma.
+
+```{r}
+
+```
+
+
+
+# Primero probamos con O2-PLS
+
+```{r}
+library(limma)
+library(DESeq2)
+library(SummarizedExperiment)
+obesidad<-variables_in_bacteria$OBESE
+levels(obesidad)<-c("NoObese","Obese")
+grupo <- variables_in_bacteria$GROUP
+columnData <- data.frame(obesidad=obesidad,grupo=grupo)
+rownames(columnData) <- variables_in_bacteria$Paciente
+metaboloma <- t(datos$metabolome)
+colnames(metaboloma)<- rownames(columnData)
+rownames(metaboloma)<-colnames(datos$metabolome)
+sse.metaboloma <- SummarizedExperiment(assays = metaboloma,
+                                         colData=columnData)
+interaccion <- interaction(obesidad,grupo)
+design <- model.matrix(~0+interaccion)
+colnames(design) <- levels(interaccion)
+cont.matrix <- makeContrasts(females = NoObese.Female-Obese.Female,
+                             males = NoObese.Male-Obese.Male,
+                             pcos = NoObese.PCOS-Obese.PCOS,
+                             diff.males.females= (NoObese.Female-Obese.Female)-(NoObese.Male-Obese.Male),
+                             diff.males.pcos = (NoObese.Male-Obese.Male)-(NoObese.PCOS-Obese.PCOS),
+                             diff.females.pcos =(NoObese.Female-Obese.Female)- (NoObese.PCOS-Obese.PCOS),
+                             levels = design)
+
+fit <- lmFit(assay(sse.metaboloma),design = design,method = "robust")
+fit2 <- contrasts.fit(fit,cont.matrix)
+fit3 <- eBayes(fit2)
+toptablemio <- topTable(fit3,coef=1:6,number = 37,adjust.method = "BH",confint = T)
+
+
+```
+
+<!-- ```{r} -->
+
+<!-- X <- scale(datos$metabolome) -->
+<!-- Y <- scale(datos$microbiome) -->
+<!-- set.seed(123) -->
+<!-- res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 10) -->
+<!-- res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ] -->
+<!-- n <- as.numeric(res_cv_min_mse[2]) -->
+
+
+<!-- nx <- as.numeric(res_cv_min_mse[3]) -->
+<!-- ny <- as.numeric(res_cv_min_mse[4]) -->
+
+<!-- res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny) -->
+
+
+<!-- ``` -->
+<!-- ```{r} -->
+<!--  plot_O2PLS <- function(obj_pls, title, xcomp, ycomp, xorto, yorto, size = 1.5, glineas = 0.25) { -->
+<!--      grupos <- list(variables_in_bacteria$GROUP, variables_in_bacteria$OBESE) -->
+<!--      Group <- grupos[[1]] -->
+<!--      Group2 <- grupos[[2]] -->
+
+<!--      colores <- 1:length(levels(Group)) -->
+<!--      labels <- variables_in_bacteria$Paciente -->
+<!--      X.joint <- as.data.frame(obj_pls$Tt) -->
+<!--      colnames(X.joint) <- paste0("X_Joint", 1:ncol(X.joint)) -->
+<!--      compxjoint <- colnames(X.joint) -->
+<!--      Y.joint <- as.data.frame(obj_pls$U) -->
+<!--      colnames(Y.joint) <- paste0("Y_Joint", 1:ncol(Y.joint)) -->
+<!--      compyjoint <- colnames(Y.joint) -->
+<!--      X.orto <- as.data.frame(obj_pls$T_Yosc) -->
+<!--      colnames(X.orto) <- paste0("X_Ortho", 1:ncol(X.orto)) -->
+<!--      compxorto <- colnames(X.orto) -->
+<!--      Y.orto <- as.data.frame(obj_pls$U_Xosc) -->
+<!--      colnames(Y.orto) <- paste0("Y_Ortho", 1:ncol(Y.orto)) -->
+<!--      compyorto <- colnames(Y.orto) -->
+
+<!--      ## Construimos los dataframespara los gráficos. -->
+
+<!--      data_conjunto <- cbind(X.joint, Y.joint) -->
+<!--      data_XYorto <- cbind(X.joint, Y.orto) -->
+<!--      data_YXorto <- cbind(Y.joint, X.orto) -->
+<!--      data_orto <- cbind(X.orto, Y.orto) -->
+<!--      ## Grafico conjunto Primero las componentes conjuntas. -->
+
+<!--      p1 <- ggplot(data_conjunto, aes_string(x = compxjoint[xcomp], y = compyjoint[ycomp])) +  theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
+<!--      # avoiding labels superposition -->
+
+
+
+<!--      p2 <- ggplot(data_XYorto, aes_string(x = compxjoint[xcomp], y = compyorto[yorto])) + theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") + geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
+<!--      # avoiding labels superposition -->
+
+
+<!--      p3 <- ggplot(data_YXorto, aes_string(x = compyjoint[ycomp], y = compxorto[xorto])) + -->
+<!--          theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
+<!--      # avoiding labels superposition -->
+
+
+<!--      p4 <- ggplot(data_orto, aes_string(x = compxorto[xorto], y = compyorto[yorto])) +         theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70")  +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
+<!--      # avoiding labels superposition -->
+
+
+<!--      ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = T, legend = "bottom") -->
+
+
+
+<!--  } -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- plot_O2PLS(res,"",1,1,1,2) -->
+<!-- ``` -->
+
+# ```{r}
+# x<-res$Tt
+# hist(x)
+# ```
+
+

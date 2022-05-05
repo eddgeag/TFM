@@ -629,7 +629,7 @@ genus.clr<-genus.clr.tmp[,Reduce(intersect,w3)]
 datos <- list(clinical_data = as.matrix(Clin),
               IP =as.matrix(IP.basal),
               metabolome = as.matrix(metabolome.basal),
-              microbiome = scale(as.matrix(phylum.clr)))
+              microbiome = scale(as.matrix(genus.clr)))
 
 ```
 
@@ -643,6 +643,9 @@ datos <- list(clinical_data = as.matrix(Clin),
 
 # Primero probamos con O2-PLS
 
+## Antes probamos analisis por genes ( lo que estabamos pensando)
+
+### Metaboloma
 ```{r}
 library(limma)
 library(DESeq2)
@@ -652,7 +655,7 @@ levels(obesidad)<-c("NoObese","Obese")
 grupo <- variables_in_bacteria$GROUP
 columnData <- data.frame(obesidad=obesidad,grupo=grupo)
 rownames(columnData) <- variables_in_bacteria$Paciente
-metaboloma <- t(datos$metabolome)
+metaboloma <- scale(t(datos$metabolome)) # ver si escalamos
 colnames(metaboloma)<- rownames(columnData)
 rownames(metaboloma)<-colnames(datos$metabolome)
 sse.metaboloma <- SummarizedExperiment(assays = metaboloma,
@@ -660,7 +663,8 @@ sse.metaboloma <- SummarizedExperiment(assays = metaboloma,
 interaccion <- interaction(obesidad,grupo)
 design <- model.matrix(~0+interaccion)
 colnames(design) <- levels(interaccion)
-cont.matrix <- makeContrasts(females = NoObese.Female-Obese.Female,
+cont.matrix <- makeContrasts(
+                             females = NoObese.Female-Obese.Female,
                              males = NoObese.Male-Obese.Male,
                              pcos = NoObese.PCOS-Obese.PCOS,
                              diff.males.females= (NoObese.Female-Obese.Female)-(NoObese.Male-Obese.Male),
@@ -668,13 +672,26 @@ cont.matrix <- makeContrasts(females = NoObese.Female-Obese.Female,
                              diff.females.pcos =(NoObese.Female-Obese.Female)- (NoObese.PCOS-Obese.PCOS),
                              levels = design)
 
-fit <- lmFit(assay(sse.metaboloma),design = design,method = "robust")
+fit <- lmFit(assay(sse.metaboloma),design = design,method = "ls") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
 fit2 <- contrasts.fit(fit,cont.matrix)
 fit3 <- eBayes(fit2)
-toptablemio <- topTable(fit3,coef=1:6,number = 37,adjust.method = "BH",confint = T)
-
+toptablemio <- topTable(fit3,coef=1,number = 37,adjust.method = "BH",confint = T)
+resultados <- decideTests(fit3)@.Data  ## mira exactamente lo que queremos
 
 ```
+### Probamos con datos microbioma
+
+```{r}
+sse.microbiome <- SummarizedExperiment(assays = t(datos$microbiome),colData = columnData)
+design <- model.matrix(~obesidad*grupo)
+fit.microbiome <- lmFit(scale(assay(sse.microbiome)),design = design,method = "ls")
+fit.2x3 <- eBayes(fit.microbiome)
+overall.2x3 <- topTable(fit.2x3,coef=2:6,number = Inf)
+```
+
+
+
+
 
 <!-- ```{r} -->
 

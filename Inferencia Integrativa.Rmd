@@ -58,6 +58,33 @@ if(any(res.bioc==F)){
 # Functions for loading data (microbiome)
 
 ```{r}
+common.bacteria <- function(datos_i,datos){
+
+  ## retorna los indices con las variables comunes
+
+  interaccion <- interaction(datos$GROUP,datos$OBESE)
+  datos$interaccion <- interaccion
+  grupo <-levels(interaccion)
+  w<-vector(mode="list",length=6)
+  names(w)<-levels(interaccion)
+  for(i in 1:6){
+   w[[names(w)[i]]]<-which(apply(as.matrix(datos_i[
+    rownames(datos_i)%in%
+      datos[datos$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
+  }
+
+  w2<-vector(mode="list",length=6)
+  names(w2)<-levels(interaccion)
+  for(i in 1:6){
+   w2[[names(w2)[i]]]<-which(apply(as.matrix(datos_i[
+    rownames(datos_i)%in%
+      datos[datos$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
+    }
+
+  w3<-lapply(w2, names)
+
+  return(w3)
+}
 
 fn.discriminacion <- function(posthoc.df){
   nombre.variable <- posthoc.df$nombre_variable
@@ -536,91 +563,23 @@ colnames(genus)
 
 ```{r}
 genus.offset<-genus+1
-phylum.offset<-phylum+1
 sum(which(genus.offset == 0))
 
 
-result.filter.genus <- low.count.removal(genus.offset, percent=0.001)
-result.filter.phylum<- low.count.removal(phylum.offset, percent=0.001)
+result.filter.genus <- low.count.removal(genus.offset, percent=0.1)
 
 genus.filter <- result.filter.genus$data.filter
-phylum.filter <- result.filter.phylum$data.filter
 
 # length(result.filter$keep.otu) 
 lib.size.genus <- apply(genus.filter, 1, sum)
-lib.size.phylum <- apply(phylum.filter,1,sum)
-par(mfrow=c(1,2))
-barplot(lib.size.genus)
-barplot(lib.size.phylum)
 
+genus.clr <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 0)
+genus.abs <- genus.filter
 
-genus.clr.tmp <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 0)
-genus.rel <- relative.fn(genus)
+result.filter.genus.rel <- low.count.removal(genus.rel, percent=0.01)
 
-
-phylum.clr.tmp <- logratio.transfo(as.matrix(phylum.filter), logratio = 'CLR', offset = 0) 
-phylum.rel.tmp <- relative.fn(phylum)
+genus.filter.rel <- result.filter.genus.rel$data.filter
 ```
-
-```{r}
-interaccion <- interaction(variables_in_bacteria$GROUP,variables_in_bacteria$OBESE)
-variables_in_bacteria$interaccion <- interaccion
-grupo <-levels(interaccion)
-w<-vector(mode="list",length=6)
-names(w)<-levels(interaccion)
-for(i in 1:6){
- w[[names(w)[i]]]<-which(apply(as.matrix(phylum.clr.tmp[
-  rownames(phylum.clr.tmp)%in%
-    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
-}
-
-w2<-vector(mode="list",length=6)
-names(w2)<-levels(interaccion)
-for(i in 1:6){
- w2[[names(w2)[i]]]<-which(apply(as.matrix(phylum.clr.tmp[
-  rownames(phylum.clr.tmp)%in%
-    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
-  }
-
-w3<-lapply(w2, names)
-phylum.clr<-phylum.clr.tmp[,Reduce(intersect,w3)]
-
-interaccion <- interaction(variables_in_bacteria$GROUP,variables_in_bacteria$OBESE)
-variables_in_bacteria$interaccion <- interaccion
-grupo <-levels(interaccion)
-w<-vector(mode="list",length=6)
-names(w)<-levels(interaccion)
-for(i in 1:6){
- w[[names(w)[i]]]<-which(apply(as.matrix(genus.clr.tmp[
-  rownames(genus.clr.tmp)%in%
-    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
-}
-
-w2<-vector(mode="list",length=6)
-names(w2)<-levels(interaccion)
-for(i in 1:6){
- w2[[names(w2)[i]]]<-which(apply(as.matrix(genus.clr.tmp[
-  rownames(genus.clr.tmp)%in%
-    variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
-  }
-
-w3<-lapply(w2, names)
-genus.clr<-genus.clr.tmp[,Reduce(intersect,w3)]
-```
-
-
-
-```{r}
-# names(w2)<-levels(interaccion)
-# for(i in 1:6){
-#  w2[[names(w2)[i]]]<-which(apply(as.matrix(genera.abs[
-#   rownames(genera.abs)%in%
-#     variables_in_bacteria[variables_in_bacteria$interaccion==grupo[i],"Paciente"],-c(grep("^ud-",colnames(genera.abs)),285,284,283)]),2,function(x) sum(x)>0))
-# }
-
-```
-
-
 
 # Vamos a volver a analizar separadamente metaboloma y microbioma (genero)
 
@@ -634,11 +593,6 @@ datos <- list(clinical_data = as.matrix(Clin),
 ```
 
 ## Empezamos con el metaboloma.
-
-```{r}
-
-```
-
 
 
 # Primero probamos con O2-PLS
@@ -660,33 +614,34 @@ colnames(metaboloma)<- rownames(columnData)
 rownames(metaboloma)<-colnames(datos$metabolome)
 sse.metaboloma <- SummarizedExperiment(assays = metaboloma,
                                          colData=columnData)
-interaccion <- interaction(obesidad,grupo)
-design <- model.matrix(~0+interaccion)
-colnames(design) <- levels(interaccion)
-cont.matrix <- makeContrasts(
-                             females = NoObese.Female-Obese.Female,
-                             males = NoObese.Male-Obese.Male,
-                             pcos = NoObese.PCOS-Obese.PCOS,
-                             diff.males.females= (NoObese.Female-Obese.Female)-(NoObese.Male-Obese.Male),
-                             diff.males.pcos = (NoObese.Male-Obese.Male)-(NoObese.PCOS-Obese.PCOS),
-                             diff.females.pcos =(NoObese.Female-Obese.Female)- (NoObese.PCOS-Obese.PCOS),
-                             levels = design)
-
-fit <- lmFit(assay(sse.metaboloma),design = design,method = "ls") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
-fit2 <- contrasts.fit(fit,cont.matrix)
-fit3 <- eBayes(fit2)
-toptablemio <- topTable(fit3,coef=1,number = 37,adjust.method = "BH",confint = T)
-resultados <- decideTests(fit3)@.Data  ## mira exactamente lo que queremos
+contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
+contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
+design <- model.matrix(~obesidad*grupo)
+fit.metaboloma <- lmFit(assay(sse.metaboloma),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
+fit.metaboloma.ebayes <- eBayes(fit.metaboloma)
+toptablemio <- topTable(fit.metaboloma.ebayes,coef=2:6,number = 37,adjust.method = "BH",confint = T)
+resultados <- decideTests(fit.metaboloma.ebayes)@.Data  ## mira exactamente lo que queremos
 
 ```
+
+
 ### Probamos con datos microbioma
 
+
+
+
+
 ```{r}
-sse.microbiome <- SummarizedExperiment(assays = t(datos$microbiome),colData = columnData)
+sse.microbiome<- SummarizedExperiment(assays = t(genus.clr),
+                                         colData=columnData)
+contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
+contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
 design <- model.matrix(~obesidad*grupo)
-fit.microbiome <- lmFit(scale(assay(sse.microbiome)),design = design,method = "ls")
-fit.2x3 <- eBayes(fit.microbiome)
-overall.2x3 <- topTable(fit.2x3,coef=2:6,number = Inf)
+fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
+fit.microbiome.ebayes <- eBayes(fit.microbiome)
+(toptablemio <- topTable(fit.microbiome.ebayes,coef=5:6,number = 37,adjust.method = "BH",confint = T))
+resultados <- decideTests(fit.microbiome.ebayes)@.Data  ## mira exactamente lo que queremos
+resultados
 ```
 
 

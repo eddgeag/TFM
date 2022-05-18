@@ -558,170 +558,192 @@ genus<-genus[,-grep("^ud-",colnames(genus))]
 colnames(genus)
 ```
 
-
 ## Pretreatment of microbiome data.
 
 ```{r}
-genus.offset<-genus+1
-sum(which(genus.offset == 0))
+low.count.removal_counts = function(
+                        data, # OTU count data frame of size n (sample) x p (OTU)
+                        abundance=10 # cutoff chosen
+                        ){
+    keep.otu <- which(colSums(data)>abundance)
+    data.filter <-data[,keep.otu]
+    return(list(data.filter = data.filter, keep.otu = keep.otu))
+}
 
+```
 
-result.filter.genus <- low.count.removal(genus.offset, percent=0.1)
+```{r}
+
+result.filter.genus <- low.count.removal_counts(genus, abundance=10)
 
 genus.filter <- result.filter.genus$data.filter
 
 # length(result.filter$keep.otu) 
 lib.size.genus <- apply(genus.filter, 1, sum)
 
-genus.clr <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 0)
+genus.clr <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 1)
 genus.abs <- genus.filter
 
-result.filter.genus.rel <- low.count.removal(genus.rel, percent=0.01)
-
-genus.filter.rel <- result.filter.genus.rel$data.filter
 ```
 
-# Vamos a volver a analizar separadamente metaboloma y microbioma (genero)
-
-```{r}
-
-datos <- list(clinical_data = as.matrix(Clin),
-              IP =as.matrix(IP.basal),
-              metabolome = as.matrix(metabolome.basal),
-              microbiome = scale(as.matrix(genus.clr)))
-
-```
-
-## Empezamos con el metaboloma.
-
-
-# Primero probamos con O2-PLS
-
-## Antes probamos analisis por genes ( lo que estabamos pensando)
-
-### Metaboloma
 ```{r}
 library(limma)
 library(DESeq2)
 library(SummarizedExperiment)
+
 obesidad<-variables_in_bacteria$OBESE
 levels(obesidad)<-c("NoObese","Obese")
 grupo <- variables_in_bacteria$GROUP
 columnData <- data.frame(obesidad=obesidad,grupo=grupo)
 rownames(columnData) <- variables_in_bacteria$Paciente
-metaboloma <- scale(t(datos$metabolome)) # ver si escalamos
-colnames(metaboloma)<- rownames(columnData)
-rownames(metaboloma)<-colnames(datos$metabolome)
-sse.metaboloma <- SummarizedExperiment(assays = metaboloma,
-                                         colData=columnData)
-contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
-contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
-design <- model.matrix(~obesidad*grupo)
-fit.metaboloma <- lmFit(assay(sse.metaboloma),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
-fit.metaboloma.ebayes <- eBayes(fit.metaboloma)
-toptablemio <- topTable(fit.metaboloma.ebayes,coef=2:6,number = 37,adjust.method = "BH",confint = T)
-resultados <- decideTests(fit.metaboloma.ebayes)@.Data  ## mira exactamente lo que queremos
 
-```
-
-
-### Probamos con datos microbioma
-
-
-
-
-
-```{r}
 sse.microbiome<- SummarizedExperiment(assays = t(genus.clr),
                                          colData=columnData)
 contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
 contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
-design <- model.matrix(~obesidad*grupo)
-fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
+design <- model.matrix(~1+obesidad*grupo)
+fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "ls") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
 fit.microbiome.ebayes <- eBayes(fit.microbiome)
-(toptablemio <- topTable(fit.microbiome.ebayes,coef=5:6,number = 37,adjust.method = "BH",confint = T))
+(toptablemio <- topTable(fit.microbiome.ebayes,coef=3:4,number = 37,adjust.method = "fdr",confint = T))
 resultados <- decideTests(fit.microbiome.ebayes)@.Data  ## mira exactamente lo que queremos
 resultados
+
+
 ```
 
 
+<!-- # Vamos a volver a analizar separadamente metaboloma y microbioma (genero) -->
+
+<!-- ```{r} -->
+
+<!-- datos <- list(clinical_data = as.matrix(Clin), -->
+<!--               IP =as.matrix(IP.basal), -->
+<!--               metabolome = as.matrix(metabolome.basal), -->
+<!--               microbiome = scale(as.matrix(genus.clr))) -->
+
+<!-- ``` -->
+
+<!-- ## Empezamos con el metaboloma. -->
+
+
+<!-- # Primero probamos con O2-PLS -->
+
+<!-- ## Antes probamos analisis por genes ( lo que estabamos pensando) -->
+
+<!-- ### Metaboloma -->
+<!-- ```{r} -->
+<!-- library(limma) -->
+<!-- library(DESeq2) -->
+<!-- library(SummarizedExperiment) -->
+<!-- obesidad<-variables_in_bacteria$OBESE -->
+<!-- levels(obesidad)<-c("NoObese","Obese") -->
+<!-- grupo <- variables_in_bacteria$GROUP -->
+<!-- columnData <- data.frame(obesidad=obesidad,grupo=grupo) -->
+<!-- rownames(columnData) <- variables_in_bacteria$Paciente -->
+<!-- metaboloma <- scale(t(datos$metabolome)) # ver si escalamos -->
+<!-- colnames(metaboloma)<- rownames(columnData) -->
+<!-- rownames(metaboloma)<-colnames(datos$metabolome) -->
+<!-- sse.metaboloma <- SummarizedExperiment(assays = metaboloma, -->
+<!--                                          colData=columnData) -->
+<!-- contrasts(obesidad)<-contr.sum(n=length(levels(obesidad))) -->
+<!-- contrasts(grupo)<-contr.sum(n=length(levels(grupo))) -->
+<!-- design <- model.matrix(~obesidad*grupo) -->
+<!-- fit.metaboloma <- lmFit(assay(sse.metaboloma),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers -->
+<!-- fit.metaboloma.ebayes <- eBayes(fit.metaboloma) -->
+<!-- toptablemio <- topTable(fit.metaboloma.ebayes,coef=2:6,number = 37,adjust.method = "BH",confint = T) -->
+<!-- resultados <- decideTests(fit.metaboloma.ebayes)@.Data  ## mira exactamente lo que queremos -->
+
+<!-- ``` -->
+
+
+<!-- <!-- ### Probamos con datos microbioma --> -->
+
+
 
 
 
 <!-- ```{r} -->
 
-<!-- X <- scale(datos$metabolome) -->
-<!-- Y <- scale(datos$microbiome) -->
-<!-- set.seed(123) -->
-<!-- res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 10) -->
-<!-- res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ] -->
-<!-- n <- as.numeric(res_cv_min_mse[2]) -->
-
-
-<!-- nx <- as.numeric(res_cv_min_mse[3]) -->
-<!-- ny <- as.numeric(res_cv_min_mse[4]) -->
-
-<!-- res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny) -->
-
-
-<!-- ``` -->
-<!-- ```{r} -->
-<!--  plot_O2PLS <- function(obj_pls, title, xcomp, ycomp, xorto, yorto, size = 1.5, glineas = 0.25) { -->
-<!--      grupos <- list(variables_in_bacteria$GROUP, variables_in_bacteria$OBESE) -->
-<!--      Group <- grupos[[1]] -->
-<!--      Group2 <- grupos[[2]] -->
-
-<!--      colores <- 1:length(levels(Group)) -->
-<!--      labels <- variables_in_bacteria$Paciente -->
-<!--      X.joint <- as.data.frame(obj_pls$Tt) -->
-<!--      colnames(X.joint) <- paste0("X_Joint", 1:ncol(X.joint)) -->
-<!--      compxjoint <- colnames(X.joint) -->
-<!--      Y.joint <- as.data.frame(obj_pls$U) -->
-<!--      colnames(Y.joint) <- paste0("Y_Joint", 1:ncol(Y.joint)) -->
-<!--      compyjoint <- colnames(Y.joint) -->
-<!--      X.orto <- as.data.frame(obj_pls$T_Yosc) -->
-<!--      colnames(X.orto) <- paste0("X_Ortho", 1:ncol(X.orto)) -->
-<!--      compxorto <- colnames(X.orto) -->
-<!--      Y.orto <- as.data.frame(obj_pls$U_Xosc) -->
-<!--      colnames(Y.orto) <- paste0("Y_Ortho", 1:ncol(Y.orto)) -->
-<!--      compyorto <- colnames(Y.orto) -->
-
-<!--      ## Construimos los dataframespara los gráficos. -->
-
-<!--      data_conjunto <- cbind(X.joint, Y.joint) -->
-<!--      data_XYorto <- cbind(X.joint, Y.orto) -->
-<!--      data_YXorto <- cbind(Y.joint, X.orto) -->
-<!--      data_orto <- cbind(X.orto, Y.orto) -->
-<!--      ## Grafico conjunto Primero las componentes conjuntas. -->
-
-<!--      p1 <- ggplot(data_conjunto, aes_string(x = compxjoint[xcomp], y = compyjoint[ycomp])) +  theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
-<!--      # avoiding labels superposition -->
-
-
-
-<!--      p2 <- ggplot(data_XYorto, aes_string(x = compxjoint[xcomp], y = compyorto[yorto])) + theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") + geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
-<!--      # avoiding labels superposition -->
-
-
-<!--      p3 <- ggplot(data_YXorto, aes_string(x = compyjoint[ycomp], y = compxorto[xorto])) + -->
-<!--          theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
-<!--      # avoiding labels superposition -->
-
-
-<!--      p4 <- ggplot(data_orto, aes_string(x = compxorto[xorto], y = compyorto[yorto])) +         theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70")  +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") -->
-<!--      # avoiding labels superposition -->
-
-
-<!--      ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = T, legend = "bottom") -->
-
-
-
-<!--  } -->
 <!-- ``` -->
 
-<!-- ```{r} -->
-<!-- plot_O2PLS(res,"",1,1,1,2) -->
-<!-- ``` -->
+
+
+
+
+<!-- <!-- ```{r} --> -->
+
+<!-- <!-- X <- scale(datos$metabolome) --> -->
+<!-- <!-- Y <- scale(datos$microbiome) --> -->
+<!-- <!-- set.seed(123) --> -->
+<!-- <!-- res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 10) --> -->
+<!-- <!-- res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ] --> -->
+<!-- <!-- n <- as.numeric(res_cv_min_mse[2]) --> -->
+
+
+<!-- <!-- nx <- as.numeric(res_cv_min_mse[3]) --> -->
+<!-- <!-- ny <- as.numeric(res_cv_min_mse[4]) --> -->
+
+<!-- <!-- res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny) --> -->
+
+
+<!-- <!-- ``` --> -->
+<!-- <!-- ```{r} --> -->
+<!-- <!--  plot_O2PLS <- function(obj_pls, title, xcomp, ycomp, xorto, yorto, size = 1.5, glineas = 0.25) { --> -->
+<!-- <!--      grupos <- list(variables_in_bacteria$GROUP, variables_in_bacteria$OBESE) --> -->
+<!-- <!--      Group <- grupos[[1]] --> -->
+<!-- <!--      Group2 <- grupos[[2]] --> -->
+
+<!-- <!--      colores <- 1:length(levels(Group)) --> -->
+<!-- <!--      labels <- variables_in_bacteria$Paciente --> -->
+<!-- <!--      X.joint <- as.data.frame(obj_pls$Tt) --> -->
+<!-- <!--      colnames(X.joint) <- paste0("X_Joint", 1:ncol(X.joint)) --> -->
+<!-- <!--      compxjoint <- colnames(X.joint) --> -->
+<!-- <!--      Y.joint <- as.data.frame(obj_pls$U) --> -->
+<!-- <!--      colnames(Y.joint) <- paste0("Y_Joint", 1:ncol(Y.joint)) --> -->
+<!-- <!--      compyjoint <- colnames(Y.joint) --> -->
+<!-- <!--      X.orto <- as.data.frame(obj_pls$T_Yosc) --> -->
+<!-- <!--      colnames(X.orto) <- paste0("X_Ortho", 1:ncol(X.orto)) --> -->
+<!-- <!--      compxorto <- colnames(X.orto) --> -->
+<!-- <!--      Y.orto <- as.data.frame(obj_pls$U_Xosc) --> -->
+<!-- <!--      colnames(Y.orto) <- paste0("Y_Ortho", 1:ncol(Y.orto)) --> -->
+<!-- <!--      compyorto <- colnames(Y.orto) --> -->
+
+<!-- <!--      ## Construimos los dataframespara los gráficos. --> -->
+
+<!-- <!--      data_conjunto <- cbind(X.joint, Y.joint) --> -->
+<!-- <!--      data_XYorto <- cbind(X.joint, Y.orto) --> -->
+<!-- <!--      data_YXorto <- cbind(Y.joint, X.orto) --> -->
+<!-- <!--      data_orto <- cbind(X.orto, Y.orto) --> -->
+<!-- <!--      ## Grafico conjunto Primero las componentes conjuntas. --> -->
+
+<!-- <!--      p1 <- ggplot(data_conjunto, aes_string(x = compxjoint[xcomp], y = compyjoint[ycomp])) +  theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
+<!-- <!--      # avoiding labels superposition --> -->
+
+
+
+<!-- <!--      p2 <- ggplot(data_XYorto, aes_string(x = compxjoint[xcomp], y = compyorto[yorto])) + theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") + geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
+<!-- <!--      # avoiding labels superposition --> -->
+
+
+<!-- <!--      p3 <- ggplot(data_YXorto, aes_string(x = compyjoint[ycomp], y = compxorto[xorto])) + --> -->
+<!-- <!--          theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
+<!-- <!--      # avoiding labels superposition --> -->
+
+
+<!-- <!--      p4 <- ggplot(data_orto, aes_string(x = compxorto[xorto], y = compyorto[yorto])) +         theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70")  +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
+<!-- <!--      # avoiding labels superposition --> -->
+
+
+<!-- <!--      ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = T, legend = "bottom") --> -->
+
+
+
+<!-- <!--  } --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r} --> -->
+<!-- <!-- plot_O2PLS(res,"",1,1,1,2) --> -->
+<!-- <!-- ``` --> -->
 
 # ```{r}
 # x<-res$Tt

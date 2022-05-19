@@ -587,9 +587,7 @@ genus.abs <- genus.filter
 ```
 
 ```{r}
-library(limma)
-library(DESeq2)
-library(SummarizedExperiment)
+library(edgeR)
 
 obesidad<-variables_in_bacteria$OBESE
 levels(obesidad)<-c("NoObese","Obese")
@@ -597,19 +595,50 @@ grupo <- variables_in_bacteria$GROUP
 columnData <- data.frame(obesidad=obesidad,grupo=grupo)
 rownames(columnData) <- variables_in_bacteria$Paciente
 
-sse.microbiome<- SummarizedExperiment(assays = t(genus.clr),
+sse.microbiome<- SummarizedExperiment(assays = t(v$E),
                                          colData=columnData)
 contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
 contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
 design <- model.matrix(~1+obesidad*grupo)
-fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "ls") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
+rownames(design)<-variables_in_bacteria$Paciente
+nf <-calcNormFactors(genus.abs,lib.size = colSums(genus.abs))
+voom.norm <- voom(t(genus.abs),lib.size = nf,design = design,plot = F)
+
+csa <-data.frame(t(voom.norm$E))
+csa$grupo <-variables_in_bacteria$GROUP
+csa.melt <- melt(csa,variable.name = "grupo")
+colnames(csa.melt) <- c("grupo","genero","value")
+ggplot(csa.melt,aes(value,color=grupo))+geom_density()
+```
+## NOTA 
+
+revisar documentacion de DESEQ2, agrupar el factor y hacer contrastes
+
+```{r}
+library(limma)
+library(DESeq2)
+library(SummarizedExperiment)
+
+
+sse.microbiome<- SummarizedExperiment(assays = (voom.norm$E),
+                                         colData=columnData)
+contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
+contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
+
+design <- model.matrix(~1+obesidad*grupo)
+fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "robust",weights = v$weights) #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
 fit.microbiome.ebayes <- eBayes(fit.microbiome)
-(toptablemio <- topTable(fit.microbiome.ebayes,coef=3:4,number = 37,adjust.method = "fdr",confint = T))
+(toptablemio <- topTable(fit.microbiome.ebayes,coef=2:6,number = 37,adjust.method = "fdr",confint = T))
 resultados <- decideTests(fit.microbiome.ebayes)@.Data  ## mira exactamente lo que queremos
 resultados
 
+```
+
+```{r}
 
 ```
+
+
 
 
 <!-- # Vamos a volver a analizar separadamente metaboloma y microbioma (genero) -->

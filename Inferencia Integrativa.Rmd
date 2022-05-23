@@ -586,6 +586,11 @@ genus.abs <- genus.filter
 
 ```
 
+
+```{r}
+//
+```
+
 ```{r}
 library(edgeR)
 
@@ -602,14 +607,39 @@ contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
 design <- model.matrix(~1+obesidad*grupo)
 rownames(design)<-variables_in_bacteria$Paciente
 nf <-calcNormFactors(genus.abs,lib.size = colSums(genus.abs))
-voom.norm <- voom(t(genus.abs),lib.size = nf,design = design,plot = F)
+voom.norm <- voom(t(genus.abs),lib.size = nf,design = design,plot = T)
 
 csa <-data.frame(t(voom.norm$E))
-csa$grupo <-variables_in_bacteria$GROUP
+csa$grupo <-variables_in_bacteria$Paciente
 csa.melt <- melt(csa,variable.name = "grupo")
 colnames(csa.melt) <- c("grupo","genero","value")
 ggplot(csa.melt,aes(value,color=grupo))+geom_density()
 ```
+
+```{r}
+datos<-csa[,-ncol(csa)]
+p1<-fn.densidad(datos = datos,fctr = interaccion)
+p2 <- fn.boxplot(datos = datos,fctr = interaccion)
+pca.log <- prcomp(t(datos),center = T,scale. = T)
+pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
+p3<-graphPCA.methods(pca.log$rotation[,1:2],
+                     datos.common = datos.common,
+                     varianzas=pca.var)+ggtitle("PCA")
+plsda.log <- plsda(datos,Y=interaccion,scale = T)
+plsda.var <-100*plsda.log$prop_expl_var$X
+p4<-graphPCA.methods(datos=plsda.log$variates$X,
+                     datos.common = datos.common,
+                     varianzas = plsda.var)+ggtitle("PLS-DA")
+p5<-ggarrange(p1,p2,common.legend = T)
+annotate_figure(p5,bottom = "none")
+p6<-ggarrange(p3,p4,ncol = 2,common.legend = T)
+annotate_figure(p6,bottom = "none")
+
+```
+
+
+
+
 ## NOTA 
 
 revisar documentacion de DESEQ2, agrupar el factor y hacer contrastes

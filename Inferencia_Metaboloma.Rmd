@@ -21,7 +21,7 @@ params:
   file_general: Integromics_1.xlsx
   file_microbiota : integromics_microbiota.xlsx
   folder.data: ../../datos
-  subtitulo: Inference univariate and multivariate microbiome
+  subtitulo: Inference univariate and multivariate Metabolome
 geometry: margin=2cm
 ---
 ```{r setup, include=FALSE}
@@ -321,38 +321,99 @@ rownames(metabolome.basal) <- sujetos
 colnames(metabolome.basal)
 
 ```
+
+
+# Preprocess data according to the microbiome.
+
+Because we have less subjects on the microbiome, and we have phylum and genera with variables with no records across all samples, we have to clean that.
+
+Furthermore, we have to take care only the basal levels across all blocks. Also we have to clean the data on the metabolome, IP for repeated variables.
+
+```{r}
+variables_in_bacteria <- general_data[general_data$Orden %in% bacteria_phylum.abs$Order, ]
+```
+
+Because, we only take care of the GROUP, and OBESE variables on the analysis, we can get rid off this variables and store them apart in a new object. Furthermore, we have to have the same names for the rows, so let's keep it in another object.
+
+```{r}
+sujetos <- variables_in_bacteria$Paciente
+GROUP <- variables_in_bacteria$GROUP
+OBESE <- variables_in_bacteria$OBESE
+interaccion <-with(variables_in_bacteria,interaction(GROUP,OBESE))
+```
+
+## Clinical data.
+
+**NOTE we are going to include also on both levels of integration body measures**
+We exclude ISI because it is measured after the load of glucose, the mean values, to exclude redundancy of the data, ant the postprandial levels. 
+
+```{r}
+sujetos <- variables_in_bacteria$Paciente
+Clin.tmp <- variables_in_bacteria[,-c(1,2,3,4,5)] # get rid off orden, paciente, sex, group and obese
+auc_clin <- colnames(Clin.tmp)[grep("AUC",colnames(Clin.tmp))]
+mean_basal_clin<-colnames(Clin.tmp)[grep("_B$",colnames(Clin.tmp))]
+sog <- colnames(Clin.tmp)[grep("^SO[GLP]",colnames(Clin.tmp))]
+variables_clin <- colnames(Clin.tmp)
+testosterona <-colnames(Clin.tmp)[grep("TEST",colnames(Clin.tmp))]
+interr<-colnames(Clin.tmp)[grep("interaccion",colnames(Clin.tmp))]
+ratio <- colnames(Clin.tmp)[grep("Ratio",colnames(Clin.tmp))]
+w<-c(which(variables_clin %in% auc_clin),which(variables_clin %in% mean_basal_clin),which(variables_clin %in% sog),which(variables_clin %in% testosterona),
+which(variables_clin %in% interr),which(variables_clin %in% ratio))
+Clin <- Clin.tmp[,-w] 
+rownames(Clin) <- sujetos
+colnames(Clin)
+```
+
+
+## IP data
+
+```{r}
+IP.tmp <- IP[IP$Paciente %in% variables_in_bacteria$Paciente,]
+redundant_variables <- c("Orden","Paciente","SEX","GROUP","OBESE","BMI")
+variables_ip <- colnames(IP.tmp)
+auc_ip <- variables_ip[grep("AUC",variables_ip)]
+mean_ip <- variables_ip[grep("_0$",variables_ip)]
+w <- c(which(variables_ip %in% redundant_variables),which(variables_ip %in% auc_ip),which(variables_ip %in% mean_ip))
+IP.basal <- IP.tmp[,-w]
+rownames(IP.basal) <- sujetos
+```
+
+## Metabolome data (37)
+
+```{r}
+metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
+redundant_data_meta <- c("Order","Sample","GROUP","OBESE")
+variables_meta <- colnames(metabolome.basal.tmp)
+mean_meta <- variables_meta[grep("_[GLP]0$",variables_meta)]
+auc_meta <- variables_meta[grep("AU[CG]",variables_meta)]
+w <- c(which(variables_meta %in% redundant_data_meta),which(variables_meta %in% mean_meta),which(variables_meta %in% auc_meta))
+metabolome.basal_mean <- metabolome.basal.tmp[,-w]
+rownames(metabolome.basal_mean) <- sujetos
+colnames(metabolome.basal_mean)
+```
+
+## Metabolome data (todos)
+
+```{r}
+metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
+redundant_data_meta <- c("Order","Sample","GROUP","OBESE")
+variables_meta <- colnames(metabolome.basal.tmp)
+mean_meta <- variables_meta[grep("_[GLP]0$",variables_meta)]
+auc_meta <- variables_meta[grep("AU[CG]",variables_meta)]
+mean_meta2 <- variables_meta[grep("_mean$",variables_meta)]
+
+w <- c(which(variables_meta %in% redundant_data_meta),which(variables_meta %in% auc_meta),which(variables_meta %in% mean_meta2))
+metabolome.basal_all <- metabolome.basal.tmp[,-w]
+rownames(metabolome.basal_all) <- sujetos
+colnames(metabolome.basal_all)
+```
+
+
 # Datos que necesitamos
 
 ```{r}
+
 pacientes <- variables_in_bacteria$Paciente
-```
-
-## Datos microbioma
-
-### Datos genero
-
-```{r}
-
-genera.abs.tmp <- genera.abs
-redundant_data_ph <- c("GROUP","SEX","OBESE")
-genus.tmp.tmp <- genera.abs.tmp[,-c(ncol(genera.abs.tmp)-2,ncol(genera.abs.tmp)-1,ncol(genera.abs.tmp))]
-genus <- genus.tmp.tmp[,colSums(genus.tmp.tmp)>0]
-rownames(genus) <- sujetos
-## removal of genus unidentified
-
-genus<-genus[,-grep("^ud-",colnames(genus))]
-
-common_genus <-common.bacteria(genus,variables_in_bacteria)
-
-genus<-genus[,common_genus]
-genus.abs <- low.count.removal.counts(genus,10)$data.filter
-
-```
-
-# Preparando inferencia
-
-
-```{r}
 grupo<-variables_in_bacteria$GROUP
 obesos <- factor(gsub(" ",".",variables_in_bacteria$OBESE))
 interaccion<-factor(paste(obesos,grupo,sep="_"))
@@ -362,136 +423,102 @@ rownames(columnData) <- pacientes
 
 ```
 
-## Descriptiva de variables
+# Probamos con la media basales
+
 
 ```{r}
-dds <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData,design = ~0+interaccion)
-dds <- DESeq2::estimateSizeFactors(dds)
-dds <- DESeq2::estimateDispersions(dds)
-dds.nb <- nbinomWaldTest(dds)
-mu<-assays(dds.nb)$mu
-
-datos<-(t(log2(mu)))
-p1<-fn.densidad(datos = datos,fctr = interaccion)
-p2 <- fn.boxplot(datos = datos,fctr = interaccion)
-pca.log <- prcomp(t(datos),center = T,scale. = T)
-pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
-p3<-graphPCA.methods(pca.log$rotation[,1:2],
-                     datos.common = datos.common,
-                     varianzas=pca.var)+ggtitle("PCA")
-pca.spearman <- princomp(cor(t(datos),method = "spearman"),fix_sign = T,cor=T)
-
-pca.spearman.scores <- pca.spearman$scores
-pca.spearman.var <- 100*(pca.spearman$sdev^2/sum(pca.spearman$sdev^2))
-p4<-graphPCA.methods(pca.spearman.scores[,1:2],
-                 datos.common = datos.common,
-                 varianzas = pca.spearman.var)+ggtitle("PCA spearman")
-
-
-
-plsda.log <- plsda(datos,Y=interaccion,scale = F)
-plsda.var <-100*plsda.log$prop_expl_var$X
-p5<-graphPCA.methods(datos=plsda.log$variates$X,
-                     datos.common = datos.common,
-                     varianzas = plsda.var)+ggtitle("PLS-DA")
-
-
-
-
-p7<-ggarrange(p1,p2,common.legend = T)
-annotate_figure(p7,bottom = "DEseq2 y log2 para visualizar")
-p8<-ggarrange(p3,p4,p5,nrow=2,ncol = 2,common.legend = T)
-annotate_figure(p8,bottom = "DEseq2 y log2 para visualizar")
-
-
+//
 ```
 
-# Inferencia
+### Probamos aproximacion limma
 
 ```{r}
-dds <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData,design = ~0+interaccion)
-inferencia.dds <- DESeq(dds)
+met37<-t(metabolome.basal_mean)
+met37_norm <- met37/rowSums(met37)
+met37_log <- apply(met37, 1,log10)
+X<-((voom(met37,normalize.method = "quantile")$E))
 
-```
+fn.densidad(t(X),interaccion)
+pcx <- prcomp(t(X),scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+graphPCA.methods(pcx$x,datos.common,varianzas)
 
-```{r}
+pcx.cor <- princomp(x=cor((X),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
 
-res.genus <- results(inferencia.dds,tidy = T)
-(res.genus.order<-res.genus[order(res.genus$padj),])
-```
-
-```{r}
-nombres <-resultsNames(inferencia.dds)
-combinaciones <- cbind("interaccion",apply((combn(nombres,2)), 1,function(x) gsub("interaccion","",x)))
-
-nombres_resultados <- apply(combinaciones[,2:3], 1, function(x) paste(x,collapse = "_vs_"))
-mis.resultados <- vector(mode="list",length=15)
-names(mis.resultados)<-nombres_resultados
-
-for(i in 1:15){
-  tmp <-results(inferencia.dds,contrast=combinaciones[i,],tidy = T)
-  tmp2 <- tmp[order(tmp$padj),]  
-  tmp3 <- tmp2[tmp2$padj<=0.05,]
-  mis.resultados[[nombres_resultados[i]]]<- tmp3[complete.cases(tmp3),]
-  
-}
-
-unique(unlist(lapply(mis.resultados, function(x) x[,1])))
-```
+plsda.met <- plsda(t(X),interaccion,scale = T)
+graphPCA.methods(plsda.met$variates$X,datos.common,varianzas)
 
 
-```{r}
-library(ggstatsplot)
-graficas <- vector(mode="list",length=25)
-nombres_sig <-unique(unlist(lapply(mis.resultados, function(x) x[,1])))
-names(graficas)<-unique(unlist(lapply(mis.resultados, function(x) x[,1])))
-datos.tmp<-(t(log2(mu)))
-datos<-as.data.frame(datos.tmp[,unique(unlist(lapply(mis.resultados, function(x) x[,1])))])
-datos$interaccion<-interaccion
-for(i in 1:25){
-  tmp<-datos[,c(i,ncol(datos))]
-  graficas[[nombres_sig[i]]]<-ggbetweenstats(tmp,x=interaccion,!!(colnames(tmp)[1]),type = "np")
-}
-```
+euc <- vegdist(t(X),method = "euclidean")
+graphPCA.methods(as.matrix(euc),datos.common,varianzas)
 
-```{r}
-graficas
 ```
 
 
 
 ```{r}
-unlist(lapply(mis.resultados, isEmpty))[which(unlist(lapply(mis.resultados, isEmpty))==T)]
-```
-
-```{r}
-datos<-((t(log2(mu))))
-euclidean <- vegdist(datos,method="euclidean")
-datos$interaccion<-interaccion
-csa <- adonis2(euclidean~obesos*grupo)
-csa
-```
-
-```{r}
-csa <-prcomp(as.matrix(euclidean),center=T)
-varianzas <- 100*(csa$sdev^2/sum(csa$sdev^2))
-graphPCA.methods(csa$x,datos.common = datos.common,varianzas = varianzas)
+library(MetaboDiff)
 ```
 
 
 ```{r}
-csa2 <-cmdscale(euclidean)
-graphPCA.methods(csa2,datos.common = datos.common,varianzas = varianzas)
+met<-scale(metabolome.basal)
+met <- scale((log2(metabolome.basal+1)))
+sse<-SummarizedExperiment(assays = t(met),colData = columnData)
+fn.densidad(t(assay(sse)),interaccion)
+pcx <- prcomp(met,scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+graphPCA.methods(pcx$x,datos.common,varianzas)
+
+pcx.cor <- princomp(x=cor(t(met),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
+
+euc <- vegdist((met),method = "euclidean")
+graphPCA.methods(as.matrix(euc),datos.common,varianzas)
+
+
+```
+
+
+```{r}
+met <- create_mae(t(metabolome.basal),rowData = data.frame(metabolitos=colnames(metabolome.basal)),colData = columnData)
+(met = knn_impute(met,cutoff=0.4))
+(met <- normalize_met(met))
+met.trans <- (t(assays(met@ExperimentList@listData$norm_imputed)[[1]]))
+fn.densidad(met.trans,interaccion)
+pcx <- prcomp(met.trans,scale=T,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+graphPCA.methods(pcx$x,datos.common,varianzas)
+
+pcx.cor <- princomp(x=cor(t(met.trans),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
+
+euc <- vegdist(scale((met.trans)),method = "euclidean")
+graphPCA.methods(as.matrix(euc),datos.common,varianzas)
 
 ```
 
 ```{r}
-library(lmPerm)
-contrasts(obesos)<-contr.sum(n=2)
-contrasts(grupo)<-contr.sum(n=3)
-y <- datos[,"Neisseria"]
-summary(aovp(y~obesos*grupo))
-pairwise.wilcox.test(y,g=obesos,p.adjust.method = "BH")
-```
 
+met3 <- 
+
+met2 <- voom(t(metabolome.basal),plot = T)
+
+fn.densidad(t(met2$E),interaccion)
+pcx <- prcomp(met.trans,scale=T,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+graphPCA.methods(pcx$x,datos.common,varianzas)
+
+pcx.cor <- princomp(x=cor(t(met.trans),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
+
+euc <- vegdist(scale((met.trans)),method = "euclidean")
+graphPCA.methods(as.matrix(euc),datos.common,varianzas)
+
+```
 

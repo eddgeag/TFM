@@ -436,11 +436,12 @@ annotate_figure(p8,bottom = "DEseq2 y log2 para visualizar")
 ```{r}
 datos_integrar.metaboloma<-t(voom(met37_norm,normalize.method = "quantile")$E)
 datos_integrar.microbioma<-(t(log2(mu)))
-X<-scale(datos_integrar.metaboloma)
-Y<-scale(datos_integrar.microbioma)
+X<-(scale((datos_integrar.metaboloma),scale=F,center = T))
+Y<-(scale((datos_integrar.microbioma),scale = F,center=T))
 
+set.seed(123456)
 
-res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 3)
+res_cv <- crossval_o2m_adjR2(X, Y, 1:5, 0:5, 0:5, nr_folds = 7)
 res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ]
 n <- as.numeric(res_cv_min_mse[2])
 nx <- as.numeric(res_cv_min_mse[3])
@@ -450,12 +451,107 @@ res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny)
 jointX <- res$Tt
 jointY <- res$U
 orthX <- res$T_Yosc
-orthy <- res$U_Xosc
+orthY <- res$U_Xosc
+
+dimX<-dim(jointX)
+dimY<-dim(jointY)
+dimXo<-dim(orthX)
+dimYo<-dim(orthY)
+
+dim.list <- list(dimX=dimX,dimY=dimY,dimXo=dimXo,dimYo=dimYo)
+
+joint.XY <-cbind(jointX,jointY)
+joint.XoY <- cbind(jointY,orthX)
+joint.YoX1<-cbind(jointX,orthY[,1])
+joint.YoX2<-cbind(jointX,orthY[,2])
+joint.YoY1 <- cbind(jointY,orthY[,1])
+joint.YoY2 <- cbind(jointY,orthY[,2])
+
+
 varianzas <- c(1,2)
-p1 <- graphPCA.methods(cbind(jointX,jointY),datos.common,varianzas)
-p2 <- graphPCA.methods(cbind(jointY,orthy),datos.common,varianzas)
-p3 <- graphPCA.methods(cbind(orthX,jointX),datos.common,varianzas)
-ggarrange(p1,p2,p3,common.legend = T)
+p1 <- graphPCA.methods(joint.XY,datos.common,varianzas)+ggtitle("jointXY")+xlab("")+ylab("")
+p2 <-graphPCA.methods(orthY,datos.common,varianzas)+ggtitle("orthY")+xlab("")+ylab("")
+p3<-graphPCA.methods(orthX,datos.common,varianzas)+ggtitle("orthX")+xlab("")+ylab("")
+
+p4<-graphPCA.methods(cbind(orthY[,1],orthX[,1]),datos.common,varianzas)+ggtitle("orthXY1")+xlab("")+ylab("")
+
+p5<-graphPCA.methods(cbind(orthY[,2],orthX[,2]),datos.common,varianzas)+ggtitle("orthXY2")+xlab("")+ylab("")
+
+p6<-graphPCA.methods(cbind(orthY[,1],orthX[,2]),datos.common,varianzas)+ggtitle("orthY_1X2")+xlab("")+ylab("")
+
+####
+
+p7<-graphPCA.methods(cbind(orthY[,2],orthX[,1]),datos.common,varianzas)+ggtitle("orthY_2X1")+xlab("")+ylab("")
+
+
+ggarrange(p1,p2,p7,p4,p5,p6,nrow=3,ncol=2,common.legend = T)
+
+p8<-graphPCA.methods(cbind(orthX[,1],jointY[,1]),datos.common,varianzas)+ggtitle("OrthX_1-jointY")+xlab("")+ylab("")
+
+p9<-graphPCA.methods(cbind(orthX[,2],jointY[,1]),datos.common,varianzas)+ggtitle("OrthX_2-jointY")+xlab("")+ylab("")
+
+p10<-graphPCA.methods(cbind(jointX[,1],orthY[,1]),datos.common,varianzas)+ggtitle("OtrthY_1-jointX")+xlab("")+ylab("")
+
+p11<-graphPCA.methods(cbind(jointX[,1],orthY[,2]),datos.common,varianzas)+ggtitle("OrthY2_jointX")+xlab("")+ylab("")
+
+
+ggarrange(p8,p9,p10,p11,nrow=2,ncol=2,common.legend = T)
+
+
+
+p12<-graphPCA.methods(cbind(jointX,orthX[,1]),datos.common,varianzas)+ggtitle("jointX-orthX1")
+
+p13<-graphPCA.methods(cbind(jointX,orthX[,2]),datos.common,varianzas)+ggtitle("jointX-orthX2")
+
+
+p14<-graphPCA.methods(cbind(jointY,orthY[,1]),datos.common,varianzas)+ggtitle("jointY-orthY1")
+
+
+p15<-graphPCA.methods(cbind(jointY,orthY[,2]),datos.common,varianzas)+ggtitle("jointY-ortYX2")
+
+ggarrange(p12,p13,p14,p15,nrow=2,ncol=2,common.legend = T)
+
+(dimensiones <-unlist(lapply(dim.list,function(x) x[2])))
+if(!any(unlist(lapply(dim.list,function(x) x[2]))<2) & dimensiones[4]>2){
+  
+  p7 <- graphPCA.methods(jointX,datos.common,varianzas)+ggtitle("jointX")+xlab("")+ylab("")
+  p8<-graphPCA.methods(jointY,datos.common,varianzas)+ggtitle("jointY")+xlab("")+ylab("")
+  p9<-graphPCA.methods(orthX,datos.common,varianzas)+ggtitle("orthX")+xlab("")+ylab("")
+  p10 <-graphPCA.methods(orthY,datos.common,varianzas)+ggtitle("orthY")+xlab("")+ylab("")
+  p11 <- graphPCA.methods(cbind(jointX[,1],jointY[,2]),datos.common,varianzas)+ggtitle("jointX1Y")+xlab("")+ylab("")
+  p12<- graphPCA.methods(cbind(jointX[,2],jointY[,1]),datos.common,varianzas)+ggtitle("jointX2Y")+xlab("")+ylab("")
+  ggarrange(p7,p8,p9,p10,p11,p12,common.legend = T,ncol=3,nrow=2)
+  
+  
+}
+```
+
+
+
+```{r}
+library(STATegRa)
+exprs<- datos_integrar.metaboloma
+pData <- columnData
+phenoData<-AnnotatedDataFrame(pData)
+sseMet <- ExpressionSet(assayData = t(exprs),phenoData = phenoData)
+
+exprs<- datos_integrar.microbioma
+pData <- columnData
+phenoData<-AnnotatedDataFrame(pData)
+sseMic <- ExpressionSet(assayData = t(exprs),phenoData = phenoData)
+
 
 ```
+
+```{r}
+csa <- omicsNPC(list(metabolome=sseMet,microbiome=sseMic),numCores = 4,outcomeName = "interaccion")
+
+csa1<-csa$stats0
+csa2 <- csa$pvalues0
+csa3 <-csa$pvaluesNPC
+```
+
+
+
+
 

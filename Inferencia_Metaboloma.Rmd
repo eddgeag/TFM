@@ -425,100 +425,74 @@ rownames(columnData) <- pacientes
 
 # Probamos con la media basales
 
-
-```{r}
-//
-```
-
 ### Probamos aproximacion limma
 
 ```{r}
 met37<-t(metabolome.basal_mean)
 met37_norm <- met37/rowSums(met37)
-met37_log <- apply(met37, 1,log10)
-X<-((voom(met37,normalize.method = "quantile")$E))
-
-fn.densidad(t(X),interaccion)
+met37_log <- t(apply(met37_norm,1,log))
+X<-(voom(met37_norm,normalize.method = "quantile")$E)
+p1<-fn.densidad((t(X)),interaccion)
+p2<-fn.boxplot(t(X),interaccion)
 pcx <- prcomp(t(X),scale=F,center=T)
 varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
-graphPCA.methods(pcx$x,datos.common,varianzas)
+p3<-graphPCA.methods(pcx$x,datos.common,varianzas)+ggtitle("PCA")
 
 pcx.cor <- princomp(x=cor((X),method = "spearman"),cor=T)
 varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
+p4<-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)+ggtitle("PCA spearman")
 
 plsda.met <- plsda(t(X),interaccion,scale = T)
-graphPCA.methods(plsda.met$variates$X,datos.common,varianzas)
+p5<-graphPCA.methods(plsda.met$variates$X,datos.common,varianzas)+ggtitle("PLS-DA")
 
 
 euc <- vegdist(t(X),method = "euclidean")
-graphPCA.methods(as.matrix(euc),datos.common,varianzas)
+points<-cmdscale(euc)
+p6<-graphPCA.methods(points,datos.common,varianzas)+ggtitle("MDS")
+ggarrange(p1,p2,common.legend = T)
+ggarrange(p3,p4,p5,p6,ncol=2,nrow=2,common.legend = T)
 
+# 
+# distancias <-c("manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", "aitchison", "robust.aitchison")
+# 
+# distancias<-distancias[-c(10,12,15)]
+# 
+# distancias.list <- vector("list",length=length(distancias))
+# names(distancias.list) <- distancias
+# for( di in 1:length(distancias)){
+#   
+#   distancias.list[[distancias[di]]]<-cmdscale(vegdist(t(X),method=distancias[di]))
+#   
+# }
+# 
+# pslist <-vector("list",length=length(distancias.list))
+# names(pslist)<-distancias
+# for( i in 1:length(distancias.list)){
+#   pslist[[distancias[i]]]<-graphPCA.methods(distancias.list[[distancias[i]]],datos.common,varianzas )
+#   
+#   
+# }
+# 
+# pslist
 ```
 
 
 
 ```{r}
-library(MetaboDiff)
-```
-
-
-```{r}
-met<-scale(metabolome.basal)
-met <- scale((log2(metabolome.basal+1)))
-sse<-SummarizedExperiment(assays = t(met),colData = columnData)
-fn.densidad(t(assay(sse)),interaccion)
-pcx <- prcomp(met,scale=F,center=T)
-varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
-graphPCA.methods(pcx$x,datos.common,varianzas)
-
-pcx.cor <- princomp(x=cor(t(met),method = "spearman"),cor=T)
-varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
-
-euc <- vegdist((met),method = "euclidean")
-graphPCA.methods(as.matrix(euc),datos.common,varianzas)
-
-
-```
-
-
-```{r}
-met <- create_mae(t(metabolome.basal),rowData = data.frame(metabolitos=colnames(metabolome.basal)),colData = columnData)
-(met = knn_impute(met,cutoff=0.4))
-(met <- normalize_met(met))
-met.trans <- (t(assays(met@ExperimentList@listData$norm_imputed)[[1]]))
-fn.densidad(met.trans,interaccion)
-pcx <- prcomp(met.trans,scale=T,center=T)
-varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
-graphPCA.methods(pcx$x,datos.common,varianzas)
-
-pcx.cor <- princomp(x=cor(t(met.trans),method = "spearman"),cor=T)
-varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
-
-euc <- vegdist(scale((met.trans)),method = "euclidean")
-graphPCA.methods(as.matrix(euc),datos.common,varianzas)
-
+contrasts(obesos)<-contr.sum(n=2)
+contrasts(grupo)<-contr.sum(n=3)
+csa <- adonis2(dist(t(X))~obesos*grupo)
+csa
 ```
 
 ```{r}
-
-met3 <- 
-
-met2 <- voom(t(metabolome.basal),plot = T)
-
-fn.densidad(t(met2$E),interaccion)
-pcx <- prcomp(met.trans,scale=T,center=T)
-varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
-graphPCA.methods(pcx$x,datos.common,varianzas)
-
-pcx.cor <- princomp(x=cor(t(met.trans),method = "spearman"),cor=T)
-varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)
-
-euc <- vegdist(scale((met.trans)),method = "euclidean")
-graphPCA.methods(as.matrix(euc),datos.common,varianzas)
+library(lmPerm)
+contrasts(obesos)<-contr.sum(n=2)
+contrasts(grupo)<-contr.sum(n=3)
+y <- t(X)[,7]
+summary(aovp(y~obesos*grupo))
+pairwise.wilcox.test(y,g=obesos,p.adjust.method = "BH")
+pairwise.wilcox.test(y,g=grupo,p.adjust.method = "BH")
+pairwise.wilcox.test(y,g=interaccion,p.adjust.method = "BH")
 
 ```
-

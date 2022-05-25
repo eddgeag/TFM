@@ -53,298 +53,10 @@ if(any(res.bioc==F)){
   list.of.packages[which(res.bioc==F)]  ## show those package if you have troubles to install.
 }
 ```
+# Funciones
+```{r functions}
 
 
-# Functions for loading data (microbiome)
-
-```{r}
-common.bacteria <- function(datos_i,datos){
-
-  ## retorna los indices con las variables comunes
-
-  interaccion <- interaction(datos$GROUP,datos$OBESE)
-  datos$interaccion <- interaccion
-  grupo <-levels(interaccion)
-  w<-vector(mode="list",length=6)
-  names(w)<-levels(interaccion)
-  for(i in 1:6){
-   w[[names(w)[i]]]<-which(apply(as.matrix(datos_i[
-    rownames(datos_i)%in%
-      datos[datos$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
-  }
-
-  w2<-vector(mode="list",length=6)
-  names(w2)<-levels(interaccion)
-  for(i in 1:6){
-   w2[[names(w2)[i]]]<-which(apply(as.matrix(datos_i[
-    rownames(datos_i)%in%
-      datos[datos$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
-    }
-
-  w3<-lapply(w2, names)
-
-  return(w3)
-}
-
-fn.discriminacion <- function(posthoc.df){
-  nombre.variable <- posthoc.df$nombre_variable
-  posthoc_df<-posthoc.df$df
-  variable.df<-posthoc.df$variable
-  valores.ajustados <- posthoc_df[,"p.adj"]
-  interaccion <- unique(as.vector(as.matrix(posthoc_df[,2:3])))
-  combinacion <- combn(interaccion,length(interaccion)-1)
-  cual.falta <-  interaccion[apply(combinacion, 2, 
-                     function(x) which(!unique(as.vector(combinacion)) %in% x))]
-  
-  lista_interaccion <- vector(mode="list",length=length(interaccion))
-  names(lista_interaccion)<- paste0(cual.falta,"_","interaccion")
-  for(comb_i in 1:length(lista_interaccion)){
-    
-    lista_interaccion[[names(lista_interaccion)[comb_i]]]<-cbind(rep(cual.falta[comb_i],length(lista_interaccion)-1),combinacion[,comb_i])
-    
-  }
-  
-  X <- posthoc_df[,2:3]
-  x1<- t(apply(X, 1, sort))
-  lista_res <- vector(mode="list",length=length(interaccion))
-  names(lista_res)<-names(lista_interaccion)
-  for(l in 1:length(lista_interaccion)){
-    
-    Y<-lista_interaccion[[names(lista_interaccion)[l]]]
-    y1<-t(apply(Y, 1, sort))
-    w.match <-match(do.call(paste,
-                          as.data.frame(y1)),
-                          do.call(paste, as.data.frame(x1)))
-    
-    lista_res[[names(lista_res)[l]]]<-posthoc_df[w.match,]
-    
-  }
-
-  condicion<-unlist(lapply(lista_res, function(x) all(x[,"p.adj"]<0.05)))
-  condicion.which.is.not.nan <- condicion[!is.na(condicion)]
-  if(any(condicion.which.is.not.nan)){
-    
-
-    significante <-lista_res[which(unlist(lapply(lista_res, function(x) all(x[,"p.adj"]<0.05)))==T)]
-    significante<-do.call("bind_rows",significante)
-    significante<-unique(significante[complete.cases(significante),])
-    interpretacion <-"Se discrimina"
-    
-  }else{
-    
-    significante <- do.call("bind_rows",lista_res)
-    significante<-unique(significante[complete.cases(significante),])
-    interpretacion <-"NO se discrimina"
-  }
-
- return(list(resultado=significante,interpretacion=interpretacion))
-  
-}
-
-
-
-fn.decidetest <- function(X,fac){
-
-  homogeneidad <- car::leveneTest(X,fac)[[3]][1]
-  normalidad <- shapiro.test(X)$p.value
-
-  return(c(homogeneidad=homogeneidad,normalidad=normalidad))
-
-
-}
-DWin <- function(x) {diff(range(x)) < .Machine$double.eps ^ 0.5}
-box.group <- function(X,Y){dim(boxplot(X~Y,plot=F)$stats)[2]==length(levels(Y))}
-fn.signif <- function(lista_bloques){
-  ## lista_bloques es una lista que tiene las compoentes principales
-  which.is.factor <- which(lapply(lista_bloques,is.factor)==T)
-  
-  which.is.not.factor <- which(lapply(lista_bloques,is.factor)==F)
-  
-  factor_variables <- lista_bloques[which.is.factor]
-
-  datos.factor <- as.data.frame(do.call("bind_cols",factor_variables))
-
-  
-  which.is.data.frame<-unlist(lapply(lista_bloques[which.is.not.factor], is.data.frame))
-  
-  
-  
-  if(!any(which.is.data.frame)|| is.null(unlist(lapply(lista_bloques[which.is.not.factor],names)))){
-    
-    for(i in which.is.not.factor){
-
-    bloque_i<-data.frame(lista_bloques[[names(lista_bloques)[i]]])
-    colnames(bloque_i)<-paste0(names(lista_bloques)[i],"_",1:dim(bloque_i)[2])
-    lista_bloques[[names(lista_bloques)[i]]]<-bloque_i
-    
-    }
-    datos <- do.call(bind_cols,list(lista_bloques[which.is.not.factor]))
-  }
-  
-  datos<-datos[,-which(apply(datos, 2, DWin)==T)]
-  nombres.factores <-  names(factor_variables)
-  
-  bloques.n <- ncol(datos)
-
-  which.factor.2.levels <- which(unlist(lapply(factor_variables,function(x) length(levels(x))))<3)
-  which.factor.3orMore.levels <-which(unlist(lapply(factor_variables,function(x) length(levels(x))))>2)
-
-
-  #Primero hacemos test por componente univariante
-  res.dicotonomica <- data.frame(matrix(NA,nrow=length(which.factor.2.levels)*dim(datos)[2],ncol = 2))
-  colnames(res.dicotonomica) <- c("p-value","tipo-test")
-  k<-0
-  nombre.test <- vector(mode = "character",length=length(which.factor.2.levels)*dim(datos)[2])
-  for(i in 1:length(which.factor.2.levels)){
-
-    u<-which.factor.2.levels[i]
-    Y <- datos.factor[,u]
-
-    for(j in 1:ncol(datos)){
-      
-      k<-k+1
-
-      X <- datos[,j]
-        if(box.group(X,Y)==F){
-        message(paste("Componente ",colnames(datos)[j]," no tiene todos los niveles"))
-        next
-        }
-
-      datos_j <- data.frame(X=X,Y=Y)
-        
-      colnames(datos_j) <- c(colnames(datos)[j],colnames(datos.factor)[u])
-      frmla <- as.formula(paste0(colnames(datos)[j],"~",colnames(datos.factor[u])))
-      nombre.componente_j <- colnames(datos)[j]
-      decision.homo.normalidad <- fn.decidetest(X,Y)
-      homogeneidad<- decision.homo.normalidad[1]
-      normalidad <- decision.homo.normalidad[2]
-
-      if(all(boxplot(frmla,data=datos_j,plot=F)$stats==0)){
-
-          res.tmp <- "NO HAY VALORES EN LOS GRUPOS"
-          tipo.test <-"NO HAY"
-
-      }else if((normalidad<0.05 && homogeneidad<0.05)||(normalidad<0.05 && homogeneidad>0.05)){
-
-        res.tmp <- wilcox.test(frmla,data=datos_j)$p.value
-        tipo.test <- "Wilcox Test"
-
-      }else if(normalidad>0.05 && homogeneidad<0.05){
-        res.tmp <- t.test(frmla,data=datos_j,var.equal=F)$p.value
-        tipo.test <- "t test WELCH"
-      }else if(normalidad>0.05 && homogeneidad>0.05){
-        res.tmp <- t.test(frmla,data=datos_j,var.equal=T)$p.value
-        tipo.test <- "classic t.test"
-      }else{
-        print(c(normalidad,homogeneidad))
-      }
-      
-      res.dicotonomica[k,]<-c(res.tmp,tipo.test)
-      nombre.test_i<- paste(colnames(datos_j),collapse = "_")
-      nombre.test[k]<-nombre.test_i
-    }
-
-
-  }
-
-
-  rownames(res.dicotonomica)<-nombre.test
-  lista.res <- vector(mode="list",length = length(which.factor.3orMore.levels)*dim(datos)[2])
-  nombres.test <- vector(mode="character",length = 1)
-
-  k<-0
-    nombre.test <- vector(mode = "character",length=length(which.factor.2.levels)*dim(datos)[2])
-
-  for(m in which.factor.3orMore.levels){
-    
-      Y<-datos.factor[,m]
-
-      for(j in 1:ncol(datos)){
-        k<-k+1
-        X<- datos[,j]
-        
-        datos_j <- data.frame(X=X,Y=Y)
-        
-        colnames(datos_j) <- c(colnames(datos)[j],colnames(datos.factor)[m])
-
-      if(box.group(X,Y)==F){
-        message(paste("Componente ",colnames(datos)[j]," no tiene todos los niveles"))
-        next
-      }
-        decision.homo.normalidad <- fn.decidetest(X,Y)
-
-        homogeneidad <- decision.homo.normalidad[1]
-
-        normalidad <- decision.homo.normalidad[2]
-
-        frmla <- as.formula(paste0(colnames(datos)[j],"~",colnames(datos.factor[m])))
-        
-        mdl<-aov(frmla,data=datos_j)
-        
-        if((normalidad<0.05 || homogeneidad<0.05 ||shapiro.test(residuals(mdl))$p.value<0.05)){
-              krstest.pvalor <- kruskal.test(frmla,data=datos_j)$p.value
-             if(krstest.pvalor<0.05){
-               
-              
-              post_hoc<-data.frame(rstatix::dunn_test(data=datos_j,formula = frmla
-                                                      ,p.adjust.method = "fdr"))
-              post_hoc.list <- list(df=post_hoc,
-                                          variable=X,
-                                          nombre_variable=colnames(datos)[j])
-
-       significante.list<-fn.discriminacion(posthoc.df = post_hoc.list)
-
-          tipo.test <- "Kruskal-Wallis"
-          pvalor.tipo <- krstest.pvalor
-          }else{
-          res.tmp2 <- "No hay resultados significantes"
-          res.tmp <- "No hay diferencias entre grupos"
-          tipo.test <- "kruskal-wallis"
-          pvalor.tipo<- krstest.pvalor
-
-          }
-        }
-        else if((normalidad>0.05 && homogeneidad>0.05)){
-          
-          aov.pvalor <- summary(mdl)[[1]][1,5]
-          if(aov.pvalor<0.05){
-            
-              post_hoc<-data.frame(rstatix::games_howell_test(data=datos_j,formula = frmla))
-              post_hoc.list <- list(df=post_hoc,
-                                          variable=X,
-                                          factor=Y,
-                                          nombre_variable=colnames(datos)[j],
-                                          nombre_factor =colnames(datos.factor)[m])
-
-            significante.list<-fn.discriminacion(posthoc.df = post_hoc.list)
-          tipo.test <- "ANOVA"
-          pvalor.tipo <- aov.pvalor
-          }else{
-          res.tmp <- "No hay diferencias entre grupos"
-          res.tmp2 <- "No hay resultados"
-          tipo.test <- "ANOVA"
-          pvalor.tipo <- aov.pvalor
-          }
-      }
-
-
-      lista.res[[k]]<-list(resultado=res.tmp,tipo.test=tipo.test,pvalor=pvalor.tipo,significante=significante.list$resultado,interpretacion=significante.list$interpretacion)
-      nombre.test_i<- paste(colnames(datos_j),collapse = "_")
-      nombre.test[k]<-nombre.test_i
-
-      }
-
-
-
-  }
-
-  names(lista.res)<-nombre.test
-  resultado.analisis <- list(Variables_Dicotonomicas=res.dicotonomica,Variables_multiple=lista.res)
-  
-  
-  return(resultado.analisis)
-  }
-  
 proces_bacteria <- function(datos,tipo){
 
   Order <- bacteria_phylum.abs$Order
@@ -401,6 +113,15 @@ low.count.removal = function(
     return(list(data.filter = data.filter, keep.otu = keep.otu))
 }
 
+low.count.removal.counts = function(
+                        data, # OTU count data frame of size n (sample) x p (OTU)
+                        abundance=10 # cutoff chosen
+                        ){
+    keep.otu <- which(colSums(data)>abundance)
+    data.filter <-data[,keep.otu]
+    return(list(data.filter = data.filter, keep.otu = keep.otu))
+}
+
 relative.fn <-function(data){
   
   return(100*data/rowSums(data))
@@ -408,33 +129,114 @@ relative.fn <-function(data){
 }
 
 
+common.bacteria <- function(datos_i,datos.comunes){
+  
+
+  ## retorna los indices con las variables comunes
+
+  interaccion <- interaction(datos.comunes$GROUP,datos.comunes$OBESE)
+  datos.comunes$interaccion <- interaccion
+  grupo <-levels(interaccion)
+  w<-vector(mode="list",length=6)
+  names(w)<-levels(interaccion)
+  for(i in 1:6){
+   w[[names(w)[i]]]<-which(apply(as.matrix(datos_i[
+    rownames(datos_i)%in%
+      datos.comunes[datos.comunes$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)==0))
+  }
+
+  w2<-vector(mode="list",length=6)
+  names(w2)<-levels(interaccion)
+  for(i in 1:6){
+   w2[[names(w2)[i]]]<-which(apply(as.matrix(datos_i[
+    rownames(datos_i)%in%
+      datos.comunes[datos.comunes$interaccion==grupo[i],"Paciente"],]),2,function(x) sum(x)>0))
+    }
+
+  w3<-lapply(w2, names)
+  common_variables <-Reduce(intersect,x = w3)
+
+  return(common_variables)
+}
+
+fn.densidad <- function(datos,fctr){
+  column_var=c("interaccion","variable","value")
+  columnas <- colnames(datos)
+  filas <- rownames(datos)
+  X<-data.frame(apply(datos, 2, as.numeric))
+  colnames(X)<-columnas
+  rownames(X)<-filas
+  X$fctr<-fctr
+  X.melt <- melt(X)
+  colnames(X.melt)<-column_var
+  p<-ggplot(data=X.melt,aes(x=value,color=interaccion))+geom_density()
+  
+  return(p)
+}
+
+fn.boxplot<-function(datos,fctr){
+  column_var=c("interaccion","variable","value")
+  columnas <- colnames(datos)
+  filas <- rownames(datos)
+  X<-data.frame(apply(datos, 2, as.numeric))
+  colnames(X)<-columnas
+  rownames(X)<-filas
+  X$fctr<-fctr
+  X.melt <- melt(X)
+  colnames(X.melt)<-column_var
+  
+  p<-ggplot(X.melt,aes(x=interaccion,y=value,fill=interaccion))+geom_boxplot()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  return(p)
+}
+
+
+graphPCA.methods <- function(datos,datos.common,varianzas){
+  
+  
+  sujetos <-as.data.frame(datos)
+  sexo<-datos.common$GROUP
+  obesidad<-datos.common$OBESE
+  colnames(sujetos)<-c("PC1","PC2")
+  p1<-ggplot(sujetos,aes(x=PC1, y=PC2)) +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = sexo,shape=obesidad,fill=obesidad), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(sujetos[,1]),max(sujetos[,1]))) +
+     scale_color_manual(values=c("black","red","green"))+scale_shape_manual(values=c(17,15))+xlab(paste("PC1",round(varianzas[1],2),"%"))+ylab(paste("PC2",round(varianzas[2],2),"%"))
+  return(p1)
+}
+
 ```
 
 
-# Load the data
+# Cargamos los datos
 
-## Clinical data.
+## Datos clinicos
 
 ```{r}
 general_data <- read.xlsx(file.path(params$folder.data,params$file_general),sheetIndex =1)
 general_data$SEX <- factor(general_data$SEX, levels = c(0, 2), labels = c("Female", "Male"))
 general_data$OBESE <- factor(general_data$OBESE, levels = c(0, 1), labels = c("No Obese", "Obese"))
 general_data$GROUP <- factor(general_data$GROUP, levels = c(0, 1, 2), labels = c("Female",  "PCOS", "Male"))
+
+
 ```
 
-## IP data.
+
+## Datos IP
 
 ```{r}
+
 IP_file<-file.path(params$folder.data,file=params$file_IP) ## file path of the data
 IP.tmp<-read.xlsx(IP_file,sheetIndex = 1)
 IP<-IP.tmp[,-7] # remove the missin values column
 IP$SEX <- factor(IP$SEX,levels=c(0,2),labels = c("Female","Male"))
 IP$OBESE <- factor(IP$OBESE,levels=c(0,1),labels = c("No Obese","Obese"))
 IP$GROUP <- factor(IP$GROUP,levels=c(0,1,2),labels = c("Female","PCOS","Male"))
+
 ```
 
-
-## Metabolome data
+## Datos Metaboloma
 
 ```{r}
 metabolome_file<-file.path(params$folder.data,file=params$file_metabolome) ## file path of the data
@@ -444,9 +246,11 @@ any(is.na(metabolome.tmp)) # there is a row of missing values.
 metabolome<-metabolome.tmp[-nrow(metabolome.tmp),] ## remove the missing value row
 metabolome$GROUP<-general_data$GROUP ## add GROUP variable 
 metabolome$OBESE <- general_data$OBESE ## add OBESE variables.
+
 ```
 
-## Microbiome data.
+
+## Datos microbioma
 
 ```{r}
 bacteria_phylum.abs <- as.data.frame(read.xlsx(file.path(params$folder.data,params$file_microbiota), sheetIndex = 1))
@@ -456,32 +260,19 @@ genera.list <- proces_bacteria(bacteria_genera.abs,tipo="genera")
 
 phylum.abs <- phylum.list$abs;phylum.rel<-phylum.list$rel
 genera.abs <- genera.list$abs;genera.rel<-genera.list$rel
+
 ```
 
-
-# Preprocess data according to the microbiome.
-
-Because we have less subjects on the microbiome, and we have phylum and genera with variables with no records across all samples, we have to clean that.
-
-Furthermore, we have to take care only the basal levels across all blocks. Also we have to clean the data on the metabolome, IP for repeated variables.
-
+# Preparando los datos para la integracion
 ```{r}
 variables_in_bacteria <- general_data[general_data$Orden %in% bacteria_phylum.abs$Order, ]
+
 ```
 
-Because, we only take care of the GROUP, and OBESE variables on the analysis, we can get rid off this variables and store them apart in a new object. Furthermore, we have to have the same names for the rows, so let's keep it in another object.
-
-```{r}
-sujetos <- variables_in_bacteria$Paciente
-GROUP <- variables_in_bacteria$GROUP
-OBESE <- variables_in_bacteria$OBESE
-interaccion <-with(variables_in_bacteria,interaction(GROUP,OBESE))
-```
-
-## Clinical data.
-
+## Datos Clinicos
 **NOTE we are going to include also on both levels of integration body measures**
 We exclude ISI because it is measured after the load of glucose, the mean values, to exclude redundancy of the data, ant the postprandial levels. 
+
 
 ```{r}
 sujetos <- variables_in_bacteria$Paciente
@@ -501,8 +292,7 @@ colnames(Clin)
 ```
 
 
-## IP data
-
+## Datos IP
 ```{r}
 IP.tmp <- IP[IP$Paciente %in% variables_in_bacteria$Paciente,]
 redundant_variables <- c("Orden","Paciente","SEX","GROUP","OBESE","BMI")
@@ -512,9 +302,10 @@ mean_ip <- variables_ip[grep("_0$",variables_ip)]
 w <- c(which(variables_ip %in% redundant_variables),which(variables_ip %in% auc_ip),which(variables_ip %in% mean_ip))
 IP.basal <- IP.tmp[,-w]
 rownames(IP.basal) <- sujetos
+
 ```
 
-## Metabolome data.
+## Metabolome data (37)
 
 ```{r}
 metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
@@ -523,30 +314,16 @@ variables_meta <- colnames(metabolome.basal.tmp)
 mean_meta <- variables_meta[grep("_[GLP]0$",variables_meta)]
 auc_meta <- variables_meta[grep("AU[CG]",variables_meta)]
 w <- c(which(variables_meta %in% redundant_data_meta),which(variables_meta %in% mean_meta),which(variables_meta %in% auc_meta))
-metabolome.basal <- metabolome.basal.tmp[,-w]
-rownames(metabolome.basal) <- sujetos
-colnames(metabolome.basal)
+metabolome.basal_mean <- metabolome.basal.tmp[,-w]
+rownames(metabolome.basal_mean) <- sujetos
+colnames(metabolome.basal_mean)
 ```
+## Datos microbioma
 
-## Microbiome data.
-
-### Phylum.
+### Datos genero
 
 ```{r}
-phylum.abs.tmp <- phylum.abs
-redundant_data_ph <- c("GROUP","SEX","OBESE")
-phylum.tmp <- phylum.abs.tmp[,-c(ncol(phylum.abs.tmp)-2,ncol(phylum.abs.tmp)-1,ncol(phylum.abs.tmp))]
-phylum <- phylum.tmp[,colSums(phylum.tmp)>0]
-rownames(phylum) <- sujetos
-## removal of unidentified phyla
-phylum<-phylum[,-grep("^ud",colnames(phylum))]
 
-colnames(phylum)
-```
-
-### Genus
-
-```{r}
 genera.abs.tmp <- genera.abs
 redundant_data_ph <- c("GROUP","SEX","OBESE")
 genus.tmp.tmp <- genera.abs.tmp[,-c(ncol(genera.abs.tmp)-2,ncol(genera.abs.tmp)-1,ncol(genera.abs.tmp))]
@@ -555,69 +332,70 @@ rownames(genus) <- sujetos
 ## removal of genus unidentified
 
 genus<-genus[,-grep("^ud-",colnames(genus))]
-colnames(genus)
-```
 
-## Pretreatment of microbiome data.
+common_genus <-common.bacteria(genus,variables_in_bacteria)
 
-```{r}
-low.count.removal_counts = function(
-                        data, # OTU count data frame of size n (sample) x p (OTU)
-                        abundance=10 # cutoff chosen
-                        ){
-    keep.otu <- which(colSums(data)>abundance)
-    data.filter <-data[,keep.otu]
-    return(list(data.filter = data.filter, keep.otu = keep.otu))
-}
+genus<-genus[,common_genus]
+genus.abs <- low.count.removal.counts(genus,10)$data.filter
 
 ```
 
+# Datos que necesitamos
+
 ```{r}
 
-result.filter.genus <- low.count.removal_counts(genus, abundance=10)
+pacientes <- variables_in_bacteria$Paciente
+grupo<-variables_in_bacteria$GROUP
+obesos <- factor(gsub(" ",".",variables_in_bacteria$OBESE))
+interaccion<-factor(paste(obesos,grupo,sep="_"))
+datos.common <- variables_in_bacteria[,c("GROUP","OBESE","Paciente")]
+columnData <- data.frame(interaccion=interaccion)
+rownames(columnData) <- pacientes
 
-genus.filter <- result.filter.genus$data.filter
+```
 
-# length(result.filter$keep.otu) 
-lib.size.genus <- apply(genus.filter, 1, sum)
+### Probamos aproximacion limma
 
-genus.clr <- logratio.transfo(as.matrix(genus.filter), logratio = 'CLR', offset = 1)
-genus.abs <- genus.filter
+```{r}
+met37<-t(metabolome.basal_mean)
+met37_norm <- met37/rowSums(met37)
+met37_log <- t(apply(met37_norm,1,log))
+X<-(voom(met37_norm,normalize.method = "quantile")$E)
+p1<-fn.densidad((t(X)),interaccion)
+p2<-fn.boxplot(t(X),interaccion)
+pcx <- prcomp(t(X),scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+p3<-graphPCA.methods(pcx$x,datos.common,varianzas)+ggtitle("PCA")
+
+pcx.cor <- princomp(x=cor((X),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+p4<-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)+ggtitle("PCA spearman")
+
+plsda.met <- plsda(t(X),interaccion,scale = T)
+p5<-graphPCA.methods(plsda.met$variates$X,datos.common,varianzas)+ggtitle("PLS-DA")
+
+
+euc <- vegdist(t(X),method = "euclidean")
+points<-cmdscale(euc)
+p6<-graphPCA.methods(points,datos.common,varianzas)+ggtitle("MDS")
+ggarrange(p1,p2,common.legend = T)
+ggarrange(p3,p4,p5,p6,ncol=2,nrow=2,common.legend = T)
+
 
 ```
 
 
-```{r}
-//
-```
+
+## Descriptiva de variables microbioma
 
 ```{r}
-library(edgeR)
+dds <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData,design = ~0+interaccion)
+dds <- DESeq2::estimateSizeFactors(dds)
+dds <- DESeq2::estimateDispersions(dds)
+dds.nb <- nbinomWaldTest(dds)
+mu<-assays(dds.nb)$mu
 
-obesidad<-variables_in_bacteria$OBESE
-levels(obesidad)<-c("NoObese","Obese")
-grupo <- variables_in_bacteria$GROUP
-columnData <- data.frame(obesidad=obesidad,grupo=grupo)
-rownames(columnData) <- variables_in_bacteria$Paciente
-
-sse.microbiome<- SummarizedExperiment(assays = t(v$E),
-                                         colData=columnData)
-contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
-contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
-design <- model.matrix(~1+obesidad*grupo)
-rownames(design)<-variables_in_bacteria$Paciente
-nf <-calcNormFactors(genus.abs,lib.size = colSums(genus.abs))
-voom.norm <- voom(t(genus.abs),lib.size = nf,design = design,plot = T)
-
-csa <-data.frame(t(voom.norm$E))
-csa$grupo <-variables_in_bacteria$Paciente
-csa.melt <- melt(csa,variable.name = "grupo")
-colnames(csa.melt) <- c("grupo","genero","value")
-ggplot(csa.melt,aes(value,color=grupo))+geom_density()
-```
-
-```{r}
-datos<-csa[,-ncol(csa)]
+datos<-(t(log2(mu)))
 p1<-fn.densidad(datos = datos,fctr = interaccion)
 p2 <- fn.boxplot(datos = datos,fctr = interaccion)
 pca.log <- prcomp(t(datos),center = T,scale. = T)
@@ -625,188 +403,59 @@ pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
 p3<-graphPCA.methods(pca.log$rotation[,1:2],
                      datos.common = datos.common,
                      varianzas=pca.var)+ggtitle("PCA")
-plsda.log <- plsda(datos,Y=interaccion,scale = T)
+pca.spearman <- princomp(cor(t(datos),method = "spearman"),fix_sign = T,cor=T)
+
+pca.spearman.scores <- pca.spearman$scores
+pca.spearman.var <- 100*(pca.spearman$sdev^2/sum(pca.spearman$sdev^2))
+p4<-graphPCA.methods(pca.spearman.scores[,1:2],
+                 datos.common = datos.common,
+                 varianzas = pca.spearman.var)+ggtitle("PCA spearman")
+
+
+
+plsda.log <- plsda(datos,Y=interaccion,scale = F)
 plsda.var <-100*plsda.log$prop_expl_var$X
-p4<-graphPCA.methods(datos=plsda.log$variates$X,
+p5<-graphPCA.methods(datos=plsda.log$variates$X,
                      datos.common = datos.common,
                      varianzas = plsda.var)+ggtitle("PLS-DA")
-p5<-ggarrange(p1,p2,common.legend = T)
-annotate_figure(p5,bottom = "none")
-p6<-ggarrange(p3,p4,ncol = 2,common.legend = T)
-annotate_figure(p6,bottom = "none")
+
+
+
+
+p7<-ggarrange(p1,p2,common.legend = T)
+annotate_figure(p7,bottom = "DEseq2 y log2 para visualizar")
+p8<-ggarrange(p3,p4,p5,nrow=2,ncol = 2,common.legend = T)
+annotate_figure(p8,bottom = "DEseq2 y log2 para visualizar")
+
 
 ```
 
 
 
-
-## NOTA 
-
-revisar documentacion de DESEQ2, agrupar el factor y hacer contrastes
-
+# integracion
 ```{r}
-library(limma)
-library(DESeq2)
-library(SummarizedExperiment)
+datos_integrar.metaboloma<-t(voom(met37_norm,normalize.method = "quantile")$E)
+datos_integrar.microbioma<-(t(log2(mu)))
+X<-scale(datos_integrar.metaboloma)
+Y<-scale(datos_integrar.microbioma)
 
 
-sse.microbiome<- SummarizedExperiment(assays = (voom.norm$E),
-                                         colData=columnData)
-contrasts(obesidad)<-contr.sum(n=length(levels(obesidad)))
-contrasts(grupo)<-contr.sum(n=length(levels(grupo)))
-
-design <- model.matrix(~1+obesidad*grupo)
-fit.microbiome <- lmFit(assay(sse.microbiome),design = design,method = "robust",weights = v$weights) #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers
-fit.microbiome.ebayes <- eBayes(fit.microbiome)
-(toptablemio <- topTable(fit.microbiome.ebayes,coef=2:6,number = 37,adjust.method = "fdr",confint = T))
-resultados <- decideTests(fit.microbiome.ebayes)@.Data  ## mira exactamente lo que queremos
-resultados
+res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 3)
+res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ]
+n <- as.numeric(res_cv_min_mse[2])
+nx <- as.numeric(res_cv_min_mse[3])
+ny <- as.numeric(res_cv_min_mse[4])
+res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny)
+ 
+jointX <- res$Tt
+jointY <- res$U
+orthX <- res$T_Yosc
+orthy <- res$U_Xosc
+varianzas <- c(1,2)
+p1 <- graphPCA.methods(cbind(jointX,jointY),datos.common,varianzas)
+p2 <- graphPCA.methods(cbind(jointY,orthy),datos.common,varianzas)
+p3 <- graphPCA.methods(cbind(orthX,jointX),datos.common,varianzas)
+ggarrange(p1,p2,p3,common.legend = T)
 
 ```
-
-```{r}
-
-```
-
-
-
-
-<!-- # Vamos a volver a analizar separadamente metaboloma y microbioma (genero) -->
-
-<!-- ```{r} -->
-
-<!-- datos <- list(clinical_data = as.matrix(Clin), -->
-<!--               IP =as.matrix(IP.basal), -->
-<!--               metabolome = as.matrix(metabolome.basal), -->
-<!--               microbiome = scale(as.matrix(genus.clr))) -->
-
-<!-- ``` -->
-
-<!-- ## Empezamos con el metaboloma. -->
-
-
-<!-- # Primero probamos con O2-PLS -->
-
-<!-- ## Antes probamos analisis por genes ( lo que estabamos pensando) -->
-
-<!-- ### Metaboloma -->
-<!-- ```{r} -->
-<!-- library(limma) -->
-<!-- library(DESeq2) -->
-<!-- library(SummarizedExperiment) -->
-<!-- obesidad<-variables_in_bacteria$OBESE -->
-<!-- levels(obesidad)<-c("NoObese","Obese") -->
-<!-- grupo <- variables_in_bacteria$GROUP -->
-<!-- columnData <- data.frame(obesidad=obesidad,grupo=grupo) -->
-<!-- rownames(columnData) <- variables_in_bacteria$Paciente -->
-<!-- metaboloma <- scale(t(datos$metabolome)) # ver si escalamos -->
-<!-- colnames(metaboloma)<- rownames(columnData) -->
-<!-- rownames(metaboloma)<-colnames(datos$metabolome) -->
-<!-- sse.metaboloma <- SummarizedExperiment(assays = metaboloma, -->
-<!--                                          colData=columnData) -->
-<!-- contrasts(obesidad)<-contr.sum(n=length(levels(obesidad))) -->
-<!-- contrasts(grupo)<-contr.sum(n=length(levels(grupo))) -->
-<!-- design <- model.matrix(~obesidad*grupo) -->
-<!-- fit.metaboloma <- lmFit(assay(sse.metaboloma),design = design,method = "robust") #ajusta un modelo lineal por cada variable mirar residuos normales y homocedasticidad y outliers -->
-<!-- fit.metaboloma.ebayes <- eBayes(fit.metaboloma) -->
-<!-- toptablemio <- topTable(fit.metaboloma.ebayes,coef=2:6,number = 37,adjust.method = "BH",confint = T) -->
-<!-- resultados <- decideTests(fit.metaboloma.ebayes)@.Data  ## mira exactamente lo que queremos -->
-
-<!-- ``` -->
-
-
-<!-- <!-- ### Probamos con datos microbioma --> -->
-
-
-
-
-
-<!-- ```{r} -->
-
-<!-- ``` -->
-
-
-
-
-
-<!-- <!-- ```{r} --> -->
-
-<!-- <!-- X <- scale(datos$metabolome) --> -->
-<!-- <!-- Y <- scale(datos$microbiome) --> -->
-<!-- <!-- set.seed(123) --> -->
-<!-- <!-- res_cv <- crossval_o2m_adjR2(X, Y, 1:4, 0:4, 0:4, nr_folds = 10) --> -->
-<!-- <!-- res_cv_min_mse <- res_cv[which.min(res_cv[, 1]), ] --> -->
-<!-- <!-- n <- as.numeric(res_cv_min_mse[2]) --> -->
-
-
-<!-- <!-- nx <- as.numeric(res_cv_min_mse[3]) --> -->
-<!-- <!-- ny <- as.numeric(res_cv_min_mse[4]) --> -->
-
-<!-- <!-- res <- o2m2(X = X, Y = Y, n = n, nx = nx, ny = ny) --> -->
-
-
-<!-- <!-- ``` --> -->
-<!-- <!-- ```{r} --> -->
-<!-- <!--  plot_O2PLS <- function(obj_pls, title, xcomp, ycomp, xorto, yorto, size = 1.5, glineas = 0.25) { --> -->
-<!-- <!--      grupos <- list(variables_in_bacteria$GROUP, variables_in_bacteria$OBESE) --> -->
-<!-- <!--      Group <- grupos[[1]] --> -->
-<!-- <!--      Group2 <- grupos[[2]] --> -->
-
-<!-- <!--      colores <- 1:length(levels(Group)) --> -->
-<!-- <!--      labels <- variables_in_bacteria$Paciente --> -->
-<!-- <!--      X.joint <- as.data.frame(obj_pls$Tt) --> -->
-<!-- <!--      colnames(X.joint) <- paste0("X_Joint", 1:ncol(X.joint)) --> -->
-<!-- <!--      compxjoint <- colnames(X.joint) --> -->
-<!-- <!--      Y.joint <- as.data.frame(obj_pls$U) --> -->
-<!-- <!--      colnames(Y.joint) <- paste0("Y_Joint", 1:ncol(Y.joint)) --> -->
-<!-- <!--      compyjoint <- colnames(Y.joint) --> -->
-<!-- <!--      X.orto <- as.data.frame(obj_pls$T_Yosc) --> -->
-<!-- <!--      colnames(X.orto) <- paste0("X_Ortho", 1:ncol(X.orto)) --> -->
-<!-- <!--      compxorto <- colnames(X.orto) --> -->
-<!-- <!--      Y.orto <- as.data.frame(obj_pls$U_Xosc) --> -->
-<!-- <!--      colnames(Y.orto) <- paste0("Y_Ortho", 1:ncol(Y.orto)) --> -->
-<!-- <!--      compyorto <- colnames(Y.orto) --> -->
-
-<!-- <!--      ## Construimos los dataframespara los gráficos. --> -->
-
-<!-- <!--      data_conjunto <- cbind(X.joint, Y.joint) --> -->
-<!-- <!--      data_XYorto <- cbind(X.joint, Y.orto) --> -->
-<!-- <!--      data_YXorto <- cbind(Y.joint, X.orto) --> -->
-<!-- <!--      data_orto <- cbind(X.orto, Y.orto) --> -->
-<!-- <!--      ## Grafico conjunto Primero las componentes conjuntas. --> -->
-
-<!-- <!--      p1 <- ggplot(data_conjunto, aes_string(x = compxjoint[xcomp], y = compyjoint[ycomp])) +  theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
-<!-- <!--      # avoiding labels superposition --> -->
-
-
-
-<!-- <!--      p2 <- ggplot(data_XYorto, aes_string(x = compxjoint[xcomp], y = compyorto[yorto])) + theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") + geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
-<!-- <!--      # avoiding labels superposition --> -->
-
-
-<!-- <!--      p3 <- ggplot(data_YXorto, aes_string(x = compyjoint[ycomp], y = compxorto[xorto])) + --> -->
-<!-- <!--          theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70") +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group, shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
-<!-- <!--      # avoiding labels superposition --> -->
-
-
-<!-- <!--      p4 <- ggplot(data_orto, aes_string(x = compxorto[xorto], y = compyorto[yorto])) +         theme(legend.position = "none") + geom_hline(yintercept = 0, color = "gray70")  +  geom_vline(xintercept = 0, color = "gray70") + geom_point(aes(color = Group,shape = Group2), alpha = 0.5, size = 3) + scale_fill_discrete(name = "Group") --> -->
-<!-- <!--      # avoiding labels superposition --> -->
-
-
-<!-- <!--      ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = T, legend = "bottom") --> -->
-
-
-
-<!-- <!--  } --> -->
-<!-- <!-- ``` --> -->
-
-<!-- <!-- ```{r} --> -->
-<!-- <!-- plot_O2PLS(res,"",1,1,1,2) --> -->
-<!-- <!-- ``` --> -->
-
-# ```{r}
-# x<-res$Tt
-# hist(x)
-# ```
-
 

@@ -527,31 +527,31 @@ if(!any(unlist(lapply(dim.list,function(x) x[2]))<2) & dimensiones[4]>2){
 ```
 
 
+## Intentando
+
 
 ```{r}
-library(STATegRa)
-exprs<- datos_integrar.metaboloma
-pData <- columnData
-phenoData<-AnnotatedDataFrame(pData)
-sseMet <- ExpressionSet(assayData = t(exprs),phenoData = phenoData)
+nombres.metabolitos <- colnames(datos_integrar.metaboloma)
+nombres.generos <- colnames(datos_integrar.microbioma)
+mapeado <- Reduce(rbind,lapply(nombres.generos, function(x) cbind(x,nombres.metabolitos)),)
+colnames(mapeado)<-c("genero","metaboloma")
 
-exprs<- datos_integrar.microbioma
-pData <- columnData
-phenoData<-AnnotatedDataFrame(pData)
-sseMic <- ExpressionSet(assayData = t(exprs),phenoData = phenoData)
-
-
-```
-
-```{r}
-csa <- omicsNPC(list(metabolome=sseMet,microbiome=sseMic),numCores = 4,outcomeName = "interaccion")
-
-csa1<-csa$stats0
-csa2 <- csa$pvalues0
-csa3 <-csa$pvaluesNPC
 ```
 
 
 
+```{r}
+## nos sirve para ver si hay o no hay asociacion en una variable
+executePermutation <- function(n){replicate(n,sample(x,replace = T))}
 
+
+p.partial_met <- apply((datos_integrar.metaboloma), 2, function(x) kruskal.test(x,grupo)$p.value)
+
+p.partial_mic <- apply((datos_integrar.microbioma), 2, function(x) kruskal.test(x,grupo)$p.value)
+```
+
+
+```{r}
+
+```
 

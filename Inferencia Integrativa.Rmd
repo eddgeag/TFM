@@ -538,20 +538,9 @@ colnames(mapeado)<-c("genero","metaboloma")
 
 ```
 
-
-
 ```{r}
-## nos sirve para ver si hay o no hay asociacion en una variable
-executePermutation <- function(n){replicate(n,sample(x,replace = T))}
-
-
-p.partial_met <- apply((datos_integrar.metaboloma), 2, function(x) kruskal.test(x,grupo)$p.value)
-
-p.partial_mic <- apply((datos_integrar.microbioma), 2, function(x) kruskal.test(x,grupo)$p.value)
+library(MOFA2)
+utils::data("CLL_data")
 ```
 
-
-```{r}
-
-```
 

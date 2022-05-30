@@ -530,17 +530,178 @@ if(!any(unlist(lapply(dim.list,function(x) x[2]))<2) & dimensiones[4]>2){
 ## Intentando
 
 
-```{r}
-nombres.metabolitos <- colnames(datos_integrar.metaboloma)
-nombres.generos <- colnames(datos_integrar.microbioma)
-mapeado <- Reduce(rbind,lapply(nombres.generos, function(x) cbind(x,nombres.metabolitos)),)
-colnames(mapeado)<-c("genero","metaboloma")
 
-```
 
 ```{r}
 library(MOFA2)
-utils::data("CLL_data")
+datos <- list(metaboloma=t(datos_integrar.metaboloma),
+microbioma=t(datos_integrar.microbioma))
+MOFAobject <-create_mofa_from_matrix(datos)
+samples_metadata(MOFAobject)<- data.frame(sample=pacientes,obesidad=obesos,grupo=grupo,interaccion=interaccion)
+rownames(samples_metadata(MOFAobject))<-pacientes
 ```
+
+
+```{r}
+plot_data_overview(MOFAobject)
+```
+
+
+```{r}
+data_opts <- get_default_data_options(MOFAobject)
+head(data_opts)
+```
+```{r}
+model_opts <- get_default_model_options(MOFAobject)
+head(model_opts)
+```
+
+
+
+```{r}
+train_opts <- get_default_training_options(MOFAobject)
+head(train_opts)
+```
+
+
+```{r}
+MOFAobject <- prepare_mofa(
+  object = MOFAobject,
+  data_options = data_opts,
+  model_options = model_opts,
+  training_options = train_opts
+)
+```
+
+```{r}
+outfile = file.path(getwd(),"model.hdf5")
+reticulate::use_python("/usr/bin/python3")
+MOFAobject.trained <- run_mofa(MOFAobject, outfile,use_basilisk = F)
+```
+
+
+```{r}
+filepath <-"./model.hdf5"
+model <- load_model(filepath,remove_inactive_factors = T)
+```
+
+```{r}
+plot_data_overview(model)
+```
+
+```{r}
+samples_metadata(model)
+```
+
+```{r}
+# Total variance explained per view and group
+head(model@cache$variance_explained$r2_total[[1]]) # group 1/
+
+```
+
+```{r}
+plot_variance_explained(model, x="view", y="factor")
+```
+
+```{r}
+plot_variance_explained(model, x="view", y="factor",plot_total = T)[[2]]
+```
+
+```{r}
+plot_factor(model, 
+  factor = 1:3,
+  color_by = "grupo",
+  shape_by = "obesidad"
+)
+```
+
+```{r}
+p <- plot_factor(model, 
+  factors = c(1,2,3),
+  color_by = "grupo",
+  shape_by = "obesidad",
+  dot_size = 3,        # change dot size
+  dodge = T,           # dodge points with different colors
+  legend = F,          # remove legend
+  add_violin = T,      # add violin plots,
+  violin_alpha = 0.25  # transparency of violin plots
+)
+
+# The output of plot_factor is a ggplot2 object that we can edit
+
+p
+```
+
+```{r}
+datos.gg<-p$data
+contrasts(obesos)<-contr.sum(n=2)
+contrasts(grupo)<-contr.sum(n=3)
+colnames(datos.gg)<-c("sample","factor","value","group","group_by","grupo","obesos")
+datos.gg$interaccion<-interaccion
+ggstatsplot::grouped_ggbetweenstats(datos.gg,y=value,x=interaccion,grouping.var = "factor",type="np")
+ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor3",],y=value,x=interaccion,type="np")
+```
+
+
+
+```{r}
+plot_factors(model, 
+  factors = 1:3,
+  color_by = "grupo",
+  shape_by = "obesidad"
+)
+```
+
+
+
+```{r}
+plot_weights(model,
+  view = "metaboloma",
+  factor = 3,
+  nfeatures = 10,     # Number of features to highlight
+  scale = T,          # Scale weights from -1 to 1
+  abs = F          # Take the absolute value?
+)
+```
+
+
+
+
+```{r}
+plot_top_weights(model,
+  view = "microbioma",
+  factor = 1,
+  nfeatures = 10
+)
+plot_top_weights(model,
+  view = "metaboloma",
+  factor = 1,
+  nfeatures = 10
+)
+```
+
+```{r}
+plot_data_scatter(model,
+  view = "metaboloma",         # view of interest
+  factor = 3,             # factor of interest
+  features = 5,           # number of features to plot (they are selected by weight)
+  add_lm = TRUE,          # add linear regression
+  color_by = "obesidad",
+  shape_by="grupo"
+)
+
+```
+```{r}
+plot_data_scatter(model,
+  view = "microbioma",         # view of interest
+  factor = 3,             # factor of interest
+  features = 5,           # number of features to plot (they are selected by weight)
+  add_lm = TRUE,          # add linear regression
+  color_by = "grupo",
+  shape_by="obesidad"
+)
+
+```
+
 
 

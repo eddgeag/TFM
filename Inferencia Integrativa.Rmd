@@ -623,8 +623,9 @@ p <- plot_factor(model,
   dot_size = 3,        # change dot size
   dodge = T,           # dodge points with different colors
   legend = F,          # remove legend
-  add_violin = T,      # add violin plots,
-  violin_alpha = 0.25  # transparency of violin plots
+  add_boxplot = T,      # add violin plots,
+  violin_alpha = 0.25 ,
+  scale=F# transparency of violin plots
 )
 
 # The output of plot_factor is a ggplot2 object that we can edit
@@ -634,12 +635,11 @@ p
 
 ```{r}
 datos.gg<-p$data
-contrasts(obesos)<-contr.sum(n=2)
-contrasts(grupo)<-contr.sum(n=3)
-colnames(datos.gg)<-c("sample","factor","value","group","group_by","grupo","obesos")
 datos.gg$interaccion<-interaccion
-ggstatsplot::grouped_ggbetweenstats(datos.gg,y=value,x=interaccion,grouping.var = "factor",type="np")
-ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor3",],y=value,x=interaccion,type="np")
+datos.gg$interaccion <- factor(datos.gg$interaccion,levels =  c("No.Obese_Female","Obese_Female",
+                                                          "No.Obese_Male","Obese_Male",
+                                                          "No.Obese_PCOS","Obese_PCOS"))
+ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor3",],y=value,x=interaccion,type="parametric")
 ```
 
 
@@ -703,5 +703,178 @@ plot_data_scatter(model,
 
 ```
 
+
+### Downstream analysis
+
+```{r}
+factors <- get_factors(model, factors = "all")
+lapply(factors,dim)
+```
+
+
+```{r}
+weights <- get_weights(model, views = "all", factors = "all")
+lapply(weights,dim)
+```
+
+```{r}
+data_mdl_mofa <- get_data(model,as.data.frame = T)
+lapply(data_mdl_mofa, function(x) lapply(x, dim))[[2]]
+```
+
+
+
+```{r}
+factors <- get_factors(model, as.data.frame = T)
+```
+
+```{r}
+weights <- get_weights(model, as.data.frame = T)
+head(weights, n=3)
+```
+
+```{r}
+factores.recast <-as.data.frame(reshape2::recast(data=factors,sample~factor))
+weights.recast <-as.data.frame(reshape2::recast(data=weights,feature~factor))
+weights.recast$bloque <- factor(c(rep("metabolome",37),rep("microbiome",131-37)))
+w.tmp <-match(factores.recast$sample, variables_in_bacteria$Paciente)
+factores.recast$grupo <- NA
+factores.recast$obesidad <- NA
+for( i in 1:46){
+  factores.recast[w.tmp[i],"obesidad"]<-variables_in_bacteria[i,"OBESE"]
+  factores.recast[w.tmp[i],"grupo"]<-variables_in_bacteria[i,"GROUP"]
+
+  
+}
+
+factores.recast$obesidad <- as.factor(factores.recast$obesidad)
+levels(factores.recast$obesidad) <- c("No.Obese","Obese")
+factores.recast$grupo<- as.factor(factores.recast$grupo)
+levels(factores.recast$grupo) <- c("Female","PCOS","Male")
+factores.recast$interaccion <- interaction(factores.recast$obesidad,factores.recast$grupo)
+```
+
+
+```{r}
+factor3 <- factores.recast[,c(1,4,8,9,10)]
+weight.3 <- weights.recast[,c(1,4,8)]
+```
+
+
+```{r}
+plot(factor3$Factor3~weight.3$Factor3)
+```
+
+```{r}
+names(weight.3$Factor3) <- weight.3$feature
+names(factor3$Factor3) <- factor3$sample
+outerprod <-t((weight.3$Factor3) %*% t(factor3$Factor3))
+rownames(outerprod) <- factor3$sample
+colnames(outerprod) <- weight.3$feature
+outerprod <- as.data.frame(outerprod)
+outerprod$grupo <- factor3$grupo
+outerprod$obesidad <- factor3$obesidad
+outerprod$interaccion <- interaction(outerprod$obesidad,outerprod$grupo)
+```
+
+
+```{r}
+outerprod[,1:37]<-scale(outerprod[,1:37])
+```
+
+
+```{r}
+mds <- as.data.frame(cmdscale(dist(outerprod[,1:131],)))
+mds$obesidad <- factor3$obesidad
+mds$grupo <- factor3$grupo
+
+ggplot(mds,aes(x=V2,y=V1,group=grupo))+ geom_point(aes(color = mds$grupo,shape=mds$obesidad,fill=mds$obesidad),size=3)
+```
+```{r}
+contrasts(outerprod$obesidad) <- contr.sum(2)
+contrasts(outerprod$grupo) <- contr.sum(3)
+permanova <- adonis2(outerprod[,38:131]~outerprod$obesidad+outerprod$grupo +outerprod$obesidad:outerprod$grupo)
+permanova
+```
+
+
+```{r}
+Females <- outerprod[outerprod$grupo=="Female",1:131]
+Males <- outerprod[outerprod$grupo=="Male",1:131]
+PCOS <- outerprod[outerprod$grupo=="PCOS",1:131]
+Obese<- outerprod[outerprod$obesidad=="Obese",1:131]
+No.Obese <- outerprod[outerprod$obesidad=="No.Obese",1:131]
+PCOS.OBESE <-  outerprod[outerprod$grupo=="PCOS" & outerprod$obesidad=="Obese",1:131]
+
+PCOS.NOOBESE <-  outerprod[outerprod$grupo=="PCOS" & outerprod$obesidad=="No.Obese",1:131]
+
+Females.NO.Obese <- outerprod[outerprod$grupo=="Female" & outerprod$obesidad=="No.Obese",1:131]
+
+Females.Obese <- outerprod[outerprod$grupo=="Female" & outerprod$obesidad=="Obese",1:131]
+
+Males.NO.Obese <- outerprod[outerprod$grupo=="Male" & outerprod$obesidad=="No.Obese",1:131]
+
+Males.Obese <- outerprod[outerprod$grupo=="Male" & outerprod$obesidad=="Obese",1:131]
+
+```
+
+```{r}
+(fit.ob <-hotelling.test((Obese),(No.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.sex <-hotelling.test((Males),(Females),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.pcosfem <- hotelling.test((PCOS),(Females),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.pcosmale <- hotelling.test((PCOS),(Males),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.Noobesemale <- hotelling.test((Males.NO.Obese),(Males.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.NoobesePCOS <- hotelling.test((PCOS.NOOBESE),(PCOS.OBESE),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.females <- hotelling.test((Females.Obese),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 100))
+```
+```{r}
+(fit.females <- hotelling.test((PCOS.OBESE),(Females.Obese),perm = T,var.equal = F,shrinkage = T,B = 100))
+```
+
+
+
+
+```{r}
+weight.3[weight.3$bloque=="metabolome","Factor3"]<-scale(weight.3[weight.3$bloque=="metabolome","Factor3"])
+boxplot((as.numeric(weight.3$Factor3))~weight.3$bloque)
+
+wilcox.test(weight.3$Factor3~weight.3$bloque)
+```
+```{r}
+plot(factor3$Factor3)
+```
+
+```{r}
+plot(as.numeric(weight.3$Factor3))
+```
+
+
+```{r}
+(asociacion <-hotelling.test(t(outerprod[,1:37]),t(outerprod[,38:131]),shrinkage = T,var.equal = F,perm = T,B=100))
+```
 
 

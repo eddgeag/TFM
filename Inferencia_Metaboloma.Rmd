@@ -392,23 +392,6 @@ rownames(metabolome.basal_mean) <- sujetos
 colnames(metabolome.basal_mean)
 ```
 
-## Metabolome data (todos)
-
-```{r}
-metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
-redundant_data_meta <- c("Order","Sample","GROUP","OBESE")
-variables_meta <- colnames(metabolome.basal.tmp)
-mean_meta <- variables_meta[grep("_[GLP]0$",variables_meta)]
-auc_meta <- variables_meta[grep("AU[CG]",variables_meta)]
-mean_meta2 <- variables_meta[grep("_mean$",variables_meta)]
-
-w <- c(which(variables_meta %in% redundant_data_meta),which(variables_meta %in% auc_meta),which(variables_meta %in% mean_meta2))
-metabolome.basal_all <- metabolome.basal.tmp[,-w]
-rownames(metabolome.basal_all) <- sujetos
-colnames(metabolome.basal_all)
-```
-
-
 # Datos que necesitamos
 
 ```{r}
@@ -485,14 +468,63 @@ csa <- adonis2(dist(t(X))~obesos*grupo)
 csa
 ```
 
+
+
 ```{r}
-library(lmPerm)
-contrasts(obesos)<-contr.sum(n=2)
-contrasts(grupo)<-contr.sum(n=3)
-y <- t(X)[,7]
-summary(aovp(y~obesos*grupo))
-pairwise.wilcox.test(y,g=obesos,p.adjust.method = "BH")
-pairwise.wilcox.test(y,g=grupo,p.adjust.method = "BH")
-pairwise.wilcox.test(y,g=interaccion,p.adjust.method = "BH")
+library(MVN)
+datos<-as.data.frame(t(X))
 
 ```
+
+
+```{r}
+datos$grupo <- variables_in_bacteria$GROUP
+datos$obesos <- variables_in_bacteria$OBESE
+Females <- datos[datos$grupo=="Female",1:37]
+Males <- datos[datos$grupo=="Male",1:37]
+PCOS <- datos[datos$grupo=="PCOS",1:37]
+Obese<- datos[datos$obesos=="Obese",1:37]
+No.Obese <- datos[datos$obesos=="No Obese",1:37]
+PCOS.OBESE <-  datos[datos$grupo=="PCOS" & datos$obesos=="Obese",1:37]
+
+PCOS.NOOBESE <-  datos[datos$grupo=="PCOS" & datos$obesos=="No Obese",1:37]
+
+Females.NO.Obese <- datos[datos$grupo=="Female" & datos$obesos=="No Obese",1:37]
+
+Females.Obese <- datos[datos$grupo=="Female" & datos$obesos=="Obese",1:37]
+
+Males.NO.Obese <- datos[datos$grupo=="Male" & datos$obesos=="No Obese",1:37]
+
+Males.Obese <- datos[datos$grupo=="Male" & datos$obesos=="Obese",1:37]
+
+```
+
+
+```{r}
+(fit.ob <-hotelling.test((Obese),(No.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+
+(fit.sex <-hotelling.test((Males),(Females),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+```{r}
+(fit.pcosfem <- hotelling.test((PCOS),(Females),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+```{r}
+(fit.pcosmale <- hotelling.test((PCOS),(Males),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+
+```{r}
+(fit.Noobesemale <- hotelling.test((Males.NO.Obese),(Males.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+```{r}
+(fit.NoobesePCOS <- hotelling.test((PCOS.NOOBESE),(PCOS.OBESE),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
+```{r}
+(fit.females <- hotelling.test((Females.Obese),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 100))
+```
+
+
+

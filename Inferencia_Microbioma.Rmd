@@ -472,26 +472,81 @@ csa <- adonis2(euclidean~obesos*grupo)
 csa
 ```
 
+
+
+## Inferencia post hoc
+
 ```{r}
-csa <-prcomp(as.matrix(euclidean),center=T)
-varianzas <- 100*(csa$sdev^2/sum(csa$sdev^2))
-graphPCA.methods(csa$x,datos.common = datos.common,varianzas = varianzas)
+library(MVN)
+datos<-as.data.frame((log2(t(mu))))
+datos$obesos <- variables_in_bacteria$OBESE
+datos$grupo <- grupo
+```
+
+
+
+```{r}
+library(Hotelling)
+fit.stat <- hotelling.test(.~as.numeric(obesos),data=datos[,1:95],perm=T,shrinkage=T)
+
+fit.stat
+```
+
+```{r}
+library(DepthProc)
+
+mWilcoxonTest(as.matrix(datos[,1:94]), as.numeric(datos$obesos))
+```
+
+
+
+
+```{r}
+Females <- datos[datos$grupo=="Female",1:94]
+Males <- datos[datos$grupo=="Male",1:94]
+PCOS <- datos[datos$grupo=="PCOS",1:94]
+Obese<- datos[datos$obesos=="Obese",1:94]
+No.Obese <- datos[datos$obesos=="No Obese",1:94]
+PCOS.OBESE <-  datos[datos$grupo=="PCOS" & datos$obesos=="Obese",1:94]
+
+PCOS.NOOBESE <-  datos[datos$grupo=="PCOS" & datos$obesos=="No Obese",1:94]
+
+Females.NO.Obese <- datos[datos$grupo=="Female" & datos$obesos=="No Obese",1:94]
+
+Females.Obese <- datos[datos$grupo=="Female" & datos$obesos=="Obese",1:94]
+
+Males.NO.Obese <- datos[datos$grupo=="Male" & datos$obesos=="No Obese",1:94]
+
+Males.Obese <- datos[datos$grupo=="Male" & datos$obesos=="Obese",1:94]
+
+```
+
+
+
+```{r}
+fit.ob <-hotelling.test((Obese),(No.Obese),perm = T,var.equal = F,shrinkage = T)
+
+fit.sex <-hotelling.test((Males),(Females),perm = T,var.equal = F,shrinkage = F)
+```
+```{r}
+fit.pcosfem <- hotelling.test((PCOS),(Females),perm = T,var.equal = F,shrinkage = T)
+```
+
+```{r}
+fit.pcosmale <- hotelling.test((PCOS),(Males),perm = T,var.equal = F,shrinkage = T,B=100)
 ```
 
 
 ```{r}
-csa2 <-cmdscale(euclidean)
-graphPCA.methods(csa2,datos.common = datos.common,varianzas = varianzas)
-
+fit.Noobesemale <- hotelling.test((Males.NO.Obese),(Males.Obese),perm = T,var.equal = F,shrinkage = T,B=100)
 ```
 
 ```{r}
-library(lmPerm)
-contrasts(obesos)<-contr.sum(n=2)
-contrasts(grupo)<-contr.sum(n=3)
-y <- datos[,"Neisseria"]
-summary(aovp(y~obesos*grupo))
-pairwise.wilcox.test(y,g=obesos,p.adjust.method = "BH")
+fit.NoobesePCOS <- hotelling.test((PCOS.NOOBESE),(PCOS.OBESE),perm = T,var.equal = F,shrinkage = T,B=100)
+```
+
+```{r}
+fit.females <- hotelling.test((Females.Obese),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 100)
 ```
 
 

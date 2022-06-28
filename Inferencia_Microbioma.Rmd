@@ -39,7 +39,7 @@ Sys.setlocale("LC_TIME", "C")
 
 ```{r libraries}
 
-list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2","ggcorrplot","corrplot","ggrepel","factoextra","chemometrics","sparsepca","vegan","ca","ade4","pls","OmicsPLS")
+list.of.packages <- c("xlsx","kableExtra","dplyr","ggplot2","egg","cowplot","patchwork","gridExtra","UsingR","car","lattice","ggpubr","ggbreak","GGally","reshape2","ggcorrplot","corrplot","ggrepel","factoextra","chemometrics","sparsepca","vegan","ca","ade4","pls","OmicsPLS","Hotelling")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])] ## check for packages not installed 
 if(length(new.packages)) install.packages(new.packages) ## install packages if necessary
 res<-unlist(lapply(list.of.packages, require,character.only = T)) ## load packages needed for the session
@@ -371,133 +371,32 @@ rownames(columnData.interaccion) <- pacientes
 
 ## Descriptiva de variables
 
-
-### sexo
+# interaccion 2
+#### Descriptiva de la inferenica
 ```{r}
-dds.sex <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.sexo,design = ~0+sexo)
-dds.sex <- DESeq2::estimateSizeFactors(dds.sex)
-dds.sex <- DESeq2::estimateDispersions(dds.sex)
+columnData.interaccion <- data.frame(obesidad=obesidad,grupo=grupo,interaccion=interaccion)
+rownames(columnData.interaccion)<- pacientes
+dds.interaccion <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.interaccion,design = ~interaccion)
 
-dds.sex.nb <- nbinomWaldTest(dds.sex)
-dds.sex.lrt <- nbinomLRT(dds.sex,reduced = ~1)
-datos = log2(t(assays(dds.sex)[["mu"]]))
-# datos <- log2(t(assays(dds.sex)[["mu"]]))
-p1<-fn.densidad(datos = datos,fctr = interaccion)
-p2 <- fn.boxplot(datos = datos,fctr = interaccion)
-pca.log <- prcomp(t(datos),center = T,scale. = T)
-pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
-p3<-graphPCA.methods(pca.log$rotation[,1:2],
-                     datos.common = datos.common,
-                     varianzas=pca.var)+ggtitle("PCA")
-pca.spearman <- princomp(cor(t(datos),method = "spearman"),fix_sign = T,cor=T)
+gm_mean = function(x, na.rm=TRUE){
+  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+}
 
-pca.spearman.scores <- pca.spearman$scores
-pca.spearman.var <- 100*(pca.spearman$sdev^2/sum(pca.spearman$sdev^2))
-p4<-graphPCA.methods(pca.spearman.scores[,1:2],
-                 datos.common = datos.common,
-                 varianzas = pca.spearman.var)+ggtitle("PCA spearman")
+geoMeans = apply(counts(dds.interaccion), 1, gm_mean)
+
+diagdds = estimateSizeFactors(dds.interaccion, geoMeans = geoMeans)
+
+dds.interaccion.nb.2 = DESeq(diagdds, fitType="mean")
+
+# diagdds<-varianceStabilizingTransformation(diagdds, blind = TRUE, fitType = "local")
+
+csa <-getVarianceStabilizedData(dds.interaccion.nb.2)
+# dds.interaccion.nb.2 <- DESeq(dds.interaccion,test="Wald",sfType = "poscounts",fitType = "parametric")
+# dds.interaccion.lrt.2 <- DESeq(dds.interaccion,test="LRT",sfType = "poscounts",reduced = ~1)
 
 
-
-mds <- cmdscale(vegdist(datos,method = "euclidean"),eig = T,add = F,k=10)
-varianzas <- 100*mds$eig/sum(mds$eig)
-p5<-graphPCA.methods(datos=mds$points,
-                     datos.common = datos.common,
-                     varianzas = varianzas)+ggtitle("PCoA")
-
-
-
-
-
-p11<-ggarrange(p1,p2,p3,p4,common.legend = T)
-annotate_figure(p11,bottom = "media ajusta y rlog")
-p5
-
-
-```
-
-
-#### Inferencia
-
-##### Univariante
-
-
-Esta nos dice que solo estas bacterias son las que estiman mu y diferencian a los factores son
-```{r}
-res.sex.nb <- results(dds.sex.nb,tidy = T)
-(res.sex.nb.pvalue<-res.sex.nb[which(res.sex.nb$padj<0.05),])
-```
-En cambio esta nos dice cuales variables son las que destacan de un modelo nulo y ademas tienen alguna distincion con la interaccion
-```{r}
-
-res.sex.lrt <- results(dds.sex.lrt,tidy = T)
-(res.sex.lrt.pvalue<-res.sex.lrt[which(res.sex.lrt$padj<0.05),])
-```
-
-Estos resultados de arriba nos dicen que no existe diferencias entre sexos respecto a este factor, veamos la inferencia multivariante si nos dice lo mismo
-
-##### multivariante
-
-Primero realizamos un test de homocedasticidad
-```{r}
-datos.sexo <-as.data.frame(log2(t(assays(dds.sex)[["mu"]])))
-
-datos.sexo$sexo <- sexo
-datos.X <- datos.sexo[,-ncol(datos.sexo)]
-datos.X.scale <- scale(datos.X)
-males <- datos.X.scale[datos.sexo$sexo=="Male",]
-females <- datos.X.scale[datos.sexo$sexo=="Female",]
-## calculamos el vector de medianas de cada grupo
-medianas.males <- apply(males, 2, median)
-medianas.females <- apply(females, 2, median)
-## prearamos los datos restando las medianas
-males.prep <- abs(sweep(males,2,medianas.males,"-"))
-females.prep <- abs(sweep(females,2,medianas.females,"-"))
-todo.sexo <- rbind(females.prep,males.prep)
-todo.sexo <- data.frame(sexo,todo.sexo)
-
-## calculamos la norma euclidea
-norma.euclidea <- function(x) sqrt(sum(x^2))
-
-distancias.sexo <- data.frame(sexo=sexo, dist=apply(todo.sexo[,-1],1,norma.euclidea))
-# Hacemos el test de comparación de los dos grupos
-dist_female <- distancias.sexo$dist[sexo=="Female"]
-dist_male <- distancias.sexo$dist[sexo=="Male"]
-t.test(dist_female, dist_male, var.equal=T, data=distancias.sexo)
-```
-Tenemos igualdad de varianzas
-
-Vemos la hipoteis de la normalidad
-
-```{r}
-library(MVN)
-mvn(datos.sexo[,-ncol(datos.sexo)])
-```
-No es normal
-Por lo tanto calculamos la distancia euclidea
-```{r}
-dist.sexo <-dist(datos.sexo[,-ncol(datos.sexo)])
-library(Hotelling)
-(res.sexo <- hotelling.test(females.prep,males.prep,perm = T,var.equal = T,shrinkage = T,B=100))
-```
-
-La T2 de hotelling tomando en cuenta rlog de los datos, nos concuerda con lo que nos dice el analisis univariante
-
-
-
-
-
-### obesidad
-```{r}
-dds.obesidad <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.obesidad,design = ~1+obesidad)
-dds.obesidad <- DESeq2::estimateSizeFactors(dds.obesidad)
-dds.obesidad <- DESeq2::estimateDispersions(dds.obesidad)
-
-dds.obesidad.nb <- nbinomWaldTest(dds.obesidad)
-dds.obesidad.lrt <- nbinomLRT(dds.obesidad,reduced = ~1)
-datos = as.data.frame(log2(t(assays(dds.obesidad)[["mu"]])))
-
-# datos <- log2(t(assays(dds.obesidad)[["mu"]]))
+# datos <- t(rlog(counts(dds.interaccion.nb.2)))
+datos = as.data.frame(t(csa))
 p1<-fn.densidad(datos = datos,fctr = interaccion)
 p2 <- fn.boxplot(datos = datos,fctr = interaccion)
 pca.log <- prcomp(t(datos),center = T,scale. = T)
@@ -527,172 +426,290 @@ p5<-graphPCA.methods(datos=mds$points,
                      varianzas = varianzas)+ggtitle("PCoA")
 
 
+
 p11<-ggarrange(p1,p2,p3,p4,common.legend = T)
 annotate_figure(p11,bottom = "media ajusta y rlog")
 p5
+
+
 ```
 
-#### Inferencia
-
-##### Univariante
-
-
-Esta nos dice que solo estas bacterias son las que estiman mu y diferencian a los factores son
+#### Inferencia Multivariante
+Antes de todo preparamos los datos
 ```{r}
-res.obesidad.nb <- results(dds.obesidad.nb,tidy = T)
-(res.obesidad.nb.pvalue<-res.obesidad.nb[which(res.obesidad.nb$padj<0.05),])
+datos$grupo <- grupo
+datos$obesidad <- obesidad
+datos$interaccion <- interaccion
+#### gruposde interes
+females <- datos[datos$grupo=="Female",-c(95,96,97)]
+males <- datos[datos$grupo=="Male",-c(95,96,97)]
+pcos <- datos[datos$grupo=="PCOS",-c(95,96,97)]
+obesos <- datos[datos$obesidad=="Obese",-c(95,96,97)]
+No.Obesos <- datos[datos$obesidad=="No.Obese",-c(95,96,97)]
+#### interacciones
+females.no.obese <- datos[datos$interaccion=="No.Obese_Female",-c(95,96,97)]
+females.obese <- datos[datos$interaccion=="Obese_Female",-c(95,96,97)]
+males.no.obese <-  datos[datos$interaccion=="No.Obese_Male",-c(95,96,97)]
+males.obese <-  datos[datos$interaccion=="Obese_Male",-c(95,96,97)]
+pcos.no.obese <- datos[datos$interaccion=="No.Obese_PCOS",-c(95,96,97)]
+pcos.obese <- datos[datos$interaccion=="Obese_PCOS",-c(95,96,97)]
+
+
+(res<-adonis2(datos[,-c(95,96,97)]~datos$grupo+datos$obesidad+datos$grupo:datos$obesidad))
 ```
-En cambio esta nos dice cuales variables son las que destacan de un modelo nulo y ademas tienen alguna distincion con la interaccion
+
+### Analisis post-hoc
 ```{r}
-
-res.obesidad.lrt <- results(dds.obesidad.lrt,tidy = T)
-(res.obesidad.lrt.pvalue<-res.obesidad.lrt[which(res.obesidad.lrt$padj<0.05),])
-```
-
-Estos resultados de arriba nos dicen que no existe diferencias entre sexos respecto a este factor, veamos la inferencia multivariante si nos dice lo mismo
-
-##### multivariante
-
-Primero realizamos un test de homocedasticidad
-```{r}
-datos.obesidad <- as.data.frame(log2(t(assays(dds.obesidad)[["mu"]])))
-
-datos.obesidad$obesidad <- obesidad
-datos.X <- datos.obesidad[,-ncol(datos.obesidad)]
-datos.X.scale <- scale(datos.X)
-obesos <- datos.X.scale[datos.obesidad$obesidad=="Obese",]
-no.obesos <- datos.X.scale[datos.obesidad$obesidad=="No.Obese",]
-## calculamos el vector de medianas de cada grupo
-medianas.obesos <- apply(obesos, 2, median)
-medianas.no.obesos <- apply(no.obesos, 2, median)
-## prearamos los datos restando las medianas
-obesos.prep <- abs(sweep(obesos,2,medianas.obesos,"-"))
-no.obesos.prep <- abs(sweep(no.obesos,2,medianas.no.obesos,"-"))
-todo.obesidad <- rbind(no.obesos.prep,obesos.prep)
-todo.obesidad <- data.frame(obesidad,todo.obesidad)
-
-
-
-distancias.obesidad <- data.frame(obesidad=obesidad, dist=apply(todo.obesidad[,-1],1,norma.euclidea))
-# Hacemos el test de comparación de los dos grupos
-dist_no.obesos <- distancias.obesidad$dist[obesidad=="No.Obese"]
-dist_obesos <- distancias.obesidad$dist[obesidad=="Obese"]
-t.test(dist_no.obesos, dist_obesos, var.equal=T, data=distancias.obesidad)
-```
-Tenemos igualdad de varianzas
-
-Vemos la hipoteis de la normalidad
-
-```{r}
-library(MVN)
-mvn(datos.obesidad[,-ncol(datos.obesidad)])
-```
-No es normal
-Por lo tanto calculamos la distancia euclidea
-```{r}
-dist.obesidad <-datos.obesidad[,-ncol(datos.obesidad)]
 library(Hotelling)
-(res.obesidad <- hotelling.test(obesos.prep,no.obesos.prep,perm = T,var.equal = T,shrinkage = T,B=100))
 ```
 
-La T2 de hotelling tomando en cuenta rlog de los datos, nos concuerda con lo que nos dice el analisis univariante
+#### Obesidad
+```{r}
+(res<-hotelling.test(obesos,No.Obesos,shrinkage = T,var.equal = T,perm = T,B=100))
 
+```
 ### grupo
 ```{r}
-dds.grupo <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.grupo,design = ~1+grupo)
-dds.grupo <- DESeq2::estimateSizeFactors(dds.grupo)
-dds.grupo <- DESeq2::estimateDispersions(dds.grupo)
-
-dds.grupo.nb <- nbinomWaldTest(dds.grupo)
-dds.grupo.lrt <- nbinomLRT(dds.grupo,reduced = ~1)
-datos = log2(t(assays(dds.grupo)[["mu"]]))
-# datos <- log2(t(assays(dds.grupo)[["mu"]]))
-p1<-fn.densidad(datos = datos,fctr = interaccion)
-p2 <- fn.boxplot(datos = datos,fctr = interaccion)
-pca.log <- prcomp(t(datos),center = T,scale. = T)
-pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
-p3<-graphPCA.methods(pca.log$rotation[,1:2],
-                     datos.common = datos.common,
-                     varianzas=pca.var)+ggtitle("PCA")
-pca.spearman <- princomp(cor(t(datos),method = "spearman"),fix_sign = T,cor=T)
-
-pca.spearman.scores <- pca.spearman$scores
-pca.spearman.var <- 100*(pca.spearman$sdev^2/sum(pca.spearman$sdev^2))
-p4<-graphPCA.methods(pca.spearman.scores[,1:2],
-                 datos.common = datos.common,
-                 varianzas = pca.spearman.var)+ggtitle("PCA spearman")
+(res<-hotelling.test(females,males,shrinkage = T,var.equal = T,perm = T,B=100))
 
 
-
-mds <- cmdscale(vegdist(datos,method = "euclidean"),eig = T,add = F,k=10)
-varianzas <- 100*mds$eig/sum(mds$eig)
-p5<-graphPCA.methods(datos=mds$points,
-                     datos.common = datos.common,
-                     varianzas = varianzas)+ggtitle("PCoA")
+(res<-hotelling.test(females,pcos,shrinkage = T,var.equal = T,perm = T,B=100))
 
 
-
-
-p11<-ggarrange(p1,p2,p3,p4,common.legend = T)
-annotate_figure(p11,bottom = "media ajusta y rlog")
-p5
-
-```
-
-#### Inferencia
-
-##### Univariante
-
-
-Esta nos dice que solo estas bacterias son las que estiman mu y diferencian a los factores son
-```{r}
-res.grupo.nb <- results(dds.grupo.nb,tidy = T)
-(res.grupo.nb.pvalue<-res.grupo.nb[which(res.grupo.nb$padj<0.05),])
-```
-En cambio esta nos dice cuales variables son las que destacan de un modelo nulo y ademas tienen alguna distincion con la interaccion
-```{r}
-
-res.grupo.lrt <- results(dds.grupo.lrt,tidy = T)
-(res.grupo.lrt.pvalue<-res.grupo.lrt[which(res.grupo.lrt$padj<0.05),])
-```
-
-Estos resultados de arriba nos dicen que no existe diferencias entre sexos respecto a este factor, veamos la inferencia multivariante si nos dice lo mismo
-
-##### multivariante
-
-```{r}
-datos.grupo = as.data.frame(log2(t(assays(dds.grupo)[["mu"]])))
-datos.grupo$GROUP <- grupo
-(res.grupo <- adonis2(dist(datos.grupo[,-ncol(datos.grupo)])~datos.grupo$GROUP))
-```
-
-```{r}
-females <- datos.grupo[datos.grupo$GROUP=="Female",-ncol(datos.grupo)]
-males <- datos.grupo[datos.grupo$GROUP=="Male",-ncol(datos.grupo)]
-PCOS <- datos.grupo[datos.grupo$GROUP=="PCOS",-ncol(datos.grupo)]
-```
-
-```{r}
-(females.males <- hotelling.test((females),(males),shrinkage = T,var.equal = T,perm = T,B=100))
-(females.PCOS <- hotelling.test((females),(PCOS),shrinkage = T,var.equal = T,perm = T,B=100))
-(PCOS.males <- hotelling.test((PCOS),(males),shrinkage = T,var.equal = T,perm = T,B=100))
+(res<-hotelling.test(males,pcos,shrinkage = T,var.equal = T,perm = T,B=100))
 
 ```
 
 
 
 
+#### interacciones
 
-### interaccion
 ```{r}
-dds.interaccion <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.interaccion,design = ~1+interaccion)
+(res<-hotelling.test(females.no.obese,females.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+(res<-hotelling.test(males.no.obese,males.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+(res<-hotelling.test(pcos.no.obese,pcos.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+
+```
+## Univariante
+
+```{r}
+res <-results(dds.interaccion.nb.2)
+res[which(res$padj<0.05),]
+```
+
+
+El efecto de la obesidad para las mujeres control
+```{r}
+res <- results(dds.interaccion.nb.2,contrast=c("obesidad","No.Obese","Obese"))
+res[which(res$padj<0.05),]
+```
+
+EL efecto de la obesidad de las mujeres con PCOS comparadas con las mujeres control
+```{r}
+res <-results(dds.interaccion.nb.2, contrast=list( c("obesidad_Obese_vs_No.Obese","grupoPCOS.obesidadObese") ))
+res[which(res$padj<0.05),]
+```
+El efecto de la obesidad en los hombres comparado con las mujeres control
+```{r}
+res <-results(dds.interaccion.nb.2, contrast=list( c("obesidad_Obese_vs_No.Obese","grupoMale.obesidadObese") ))
+res[which(res$padj<0.05),]
+```
+La obesidad comparada es diferente? entre hombres y mujeres con el sindrome
+```{r}
+res <-results(dds.interaccion.nb.2, contrast=list( c("grupoPCOS.obesidadObese","grupoMale.obesidadObese") ))
+res[which(res$padj<0.05),]
+```
+Cuales generos con diferentes entre la obesidad y entre los 3 subgrupos
+```{r}
+res <- results(dds.interaccion.lrt.2)
+res[which(res$padj<0.05),]
+```
+
+
+### MI interaccion
+
+
+
+```{r}
+
+(combinaciones.interaccion <- matrix(c(levels(interaccion)[1:3],levels(interaccion)[4:6]),ncol=2,nrow = 3))
+combinaciones.grupo <- t(combn(levels(grupo),2))
+combinaciones.obesos <- t(combn(levels(obesidad),2))
+lista.obesos <- list(Obese=obesos,No.Obese=No.Obesos)
+lista.grupo <- list(Female=females,Male=males,PCOS=pcos)
+lista.sujetos <- list(No.Obese_Female=females.no.obese,
+                      Obese_Female=females.obese,
+                      No.Obese_PCOS=pcos.no.obese,
+                      Obese_PCOS=pcos.obese,
+                      No.Obese_Male=males.no.obese,
+                      Obese_Male=males.obese)
+
+matriz.obesos <- as.data.frame(matrix(NA,ncol=1,nrow=94))
+colnames(matriz.obesos)<-apply(combinaciones.obesos, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.obesos) <-colnames(genus.abs)
+
+## obesos
+
+for(j in 1:94){
+for(i in 1:dim(combinaciones.obesos)[1]){
+  x<-lista.obesos[[combinaciones.obesos[i,1]]][,j]
+  y <- lista.obesos[[combinaciones.obesos[i,2]]][,j]
+  matriz.obesos[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.grupo <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.grupo)<-apply(combinaciones.grupo, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.grupo) <-colnames(genus.abs)
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.grupo)[1]){
+  x<-lista.grupo[[combinaciones.grupo[i,1]]][,j]
+  y <- lista.grupo[[combinaciones.grupo[i,2]]][,j]
+  matriz.grupo[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.grupo.adj <- as.data.frame(t(apply(matriz.grupo, 1, function(x) p.adjust(x,method="BH"))))
+
+
+## interaccion
+
+matriz.interaccion <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.interaccion)<-apply(combinaciones.interaccion, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.interaccion) <-colnames(genus.abs)
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.interaccion)[1]){
+  x<-lista.sujetos[[combinaciones.interaccion[i,1]]][,j]
+  y <- lista.sujetos[[combinaciones.interaccion[i,2]]][,j]
+  matriz.interaccion[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
+
+
+# 
+# 
+# 
+# for(j in 1:94){
+# for(i in 1:dim(combinaciones)[1]){
+#   print(colnames(lista.sujetos[[combinaciones[i,1]]])[j])
+#   x<-lista.sujetos[[combinaciones[i,1]]][,j]
+#   y <- lista.sujetos[[combinaciones[i,2]]][,j]
+#   lista.pvalores[j,i]<-wilcox.test(x,y)$p.value
+# 
+#   
+# }
+# }
+# 
+# p.adj_valores <-as.data.frame(apply(lista.pvalores, 1,function(x) p.adjust(x,method = "BH")))
+# colnames(p.adj_valores) <- rownames(genus.t)
+```
+## univariante a mi manera
+### obesos
+```{r}
+df.obesos <-data.frame(obesos_vs_no.obesos=matriz.obesos[which(matriz.obesos[,1]<0.05),])
+rownames(df.obesos) <- rownames(matriz.obesos)[which(matriz.obesos[,1]<0.05)]
+df.obesos
+```
+### grupo
+
+```{r}
+w <- which(apply(matriz.grupo.adj, 1, function(x) any(x<0.05)))
+df.grupo <-data.frame(matriz.grupo.adj[w,])
+colnames(df.grupo) <- colnames(matriz.grupo.adj)
+rownames(df.grupo) <- rownames(matriz.grupo.adj)[w]
+df.grupo
+
+```
+
+```{r}
+intersect(rownames(df.grupo),rownames(df.obesos))
+```
+
+## interaccion mia
+
+```{r}
+w <- which(apply(matriz.interaccion.adj, 1, function(x) any(x<0.05)))
+df.interaccion <-data.frame(matriz.interaccion.adj[w,])
+colnames(df.interaccion) <- colnames(matriz.interaccion.adj)
+rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]
+
+mi_interaccion <-Reduce(intersect,list(rownames(df.grupo),rownames(df.obesos),rownames(df.interaccion)))
+
+```
+
+```{r}
+## primera aproximacion
+primera_aprox <-c("Haemophilus",
+"Intestinibacter",
+"Anaerotruncus",                          
+"Christensenella",               
+"Eisenbergiella",                        
+"Granulicatella",                          
+"Neisseria",                       
+"Romboutsia",                          
+"Saccharibacteria_genera_incertae_sedis",
+"Staphylococcus")
+
+primera_aprox[primera_aprox %in% mi_interaccion]
+```
+
+
+```{r}
+library(ggstatsplot)
+
+lista.graphos1 <- vector("list",length(primera_aprox))
+
+for(i in 1:length(primera_aprox)){
+  
+  datos_i<-data.frame(variable=datos[,primera_aprox[i]])
+  datos_i$interaccion<-interaccion
+  levels(datos_i$interaccion) <- c("No.Obese_Female","Obese_Female",
+                                   "No.Obese_PCOS","Obese_PCOS",
+                                   "No.Obese_Male","Obese_Male")
+  colnames(datos_i) <- c("variable","interaccion")
+  lista.graphos1[[i]]<- ggbetweenstats(datos_i,x = interaccion,y=variable,type = "np",)+ylab(mi_interaccion[i])
+  
+}
+  
+
+```
+
+```{r}
+lista.graphos1
+```
+
+
+## SI  ahora agrupamos los subgrupos que son combinaciones de variables
+
+
+```{r}
+columnData.interaccion <- data.frame(obesidad=obesidad,grupo=grupo,interaccion=interaccion)
+rownames(columnData.interaccion)<- pacientes
+dds.interaccion <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.interaccion,design = ~interaccion)
+datos = as.data.frame(t(apply(assays(dds.interaccion.nb.2)[["mu"]], 2,log2)))
+
 dds.interaccion <- DESeq2::estimateSizeFactors(dds.interaccion)
 dds.interaccion <- DESeq2::estimateDispersions(dds.interaccion)
 
-dds.interaccion.nb <- nbinomWaldTest(dds.interaccion)
+dds.interaccion.nb<- nbinomWaldTest(dds.interaccion)
 dds.interaccion.lrt <- nbinomLRT(dds.interaccion,reduced = ~1)
-datos = as.data.frame(log2(t(assays(dds.interaccion)[["mu"]])/sizeFactors(dds.interaccion)))
-# datos <- log2(t(assays(dds.interaccion)[["mu"]]))
+# datos = as.data.frame(log2(assays(dds.interaccion)[["mu"]]/sizeFactors(dds.interaccion)))
+csa <-getVarianceStabilizedData(dds.interaccion.nb)
+
+datos <- as.data.frame(t(csa))
 p1<-fn.densidad(datos = datos,fctr = interaccion)
 p2 <- fn.boxplot(datos = datos,fctr = interaccion)
 pca.log <- prcomp(t(datos),center = T,scale. = T)
@@ -730,134 +747,123 @@ p5
 
 ```
 
-##### Univariante
 
-
-Esta nos dice que solo estas bacterias son las que estiman mu y diferencian a los factores son
-```{r}
-res.interaccion.nb <- results(dds.interaccion.nb,tidy = T)
-(res.interaccion.nb.pvalue<-res.interaccion.nb[which(res.interaccion.nb$padj<0.05),])
-```
-En cambio esta nos dice cuales variables son las que destacan de un modelo nulo y ademas tienen alguna distincion con la interaccion
-```{r}
-
-res.interaccion.lrt <- results(dds.interaccion.lrt,tidy = T)
-(res.interaccion.lrt.pvalue<-res.interaccion.lrt[which(res.interaccion.lrt$padj<0.05),])
-```
-
-Estos resultados de arriba nos dicen que no existe diferencias entre sexos respecto a este factor, veamos la inferencia multivariante si nos dice lo mismo
-
-##### multivariante
+#### univariante
 
 ```{r}
-datos.interaccion <-  as.data.frame(log2(t(assays(dds.interaccion)[["mu"]])))
-
-datos.interaccion$interaccion <- interaccion
-(res.interaccion <- adonis2(dist(datos.interaccion[,-ncol(datos.interaccion)])~datos.interaccion$interaccion))
-```
-
-```{r}
-females.no.obese <- datos.interaccion[datos.interaccion$interaccion=="No.Obese_Female",-ncol(datos.interaccion)]
-females.Obese <- datos.interaccion[datos.interaccion$interaccion=="Obese_Female",-ncol(datos.interaccion)]
-males.no.obese <- datos.interaccion[datos.interaccion$interaccion=="No.Obese_Male",-ncol(datos.interaccion)]
-
-males.obese <- datos.interaccion[datos.interaccion$interaccion=="Obese_Male",-ncol(datos.interaccion)]
-
-
-
-PCOS.obese <- datos.interaccion[datos.interaccion$interaccion=="Obese_PCOS",-ncol(datos.interaccion)]
-
-
-PCOS.no.obese <- datos.interaccion[datos.interaccion$interaccion=="No.Obese_PCOS",-ncol(datos.interaccion)]
+res <- results(dds.interaccion.nb)
+res[which(res$padj<0.05),]
 ```
 
 
 ```{r}
-(females.ob.no.ob <- hotelling.test(females.no.obese,females.Obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(males.ob.no.ob <- hotelling.test(males.no.obese,males.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(pcos.ob.no.ob <- hotelling.test(PCOS.no.obese,PCOS.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(females.ob.pcos.ob <- hotelling.test(females.Obese,PCOS.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(males.ob.pcos.ob <- hotelling.test(PCOS.obese,males.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(females.no.ob.PCOS.NO.OB <- hotelling.test(females.no.obese,PCOS.no.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(males.no.ob.PCOS.NO.OB <- hotelling.test(males.no.obese,PCOS.no.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(males.no.ob.PCOS.OB <- hotelling.test(males.no.obese,PCOS.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(females.no.ob.PCOS.OB <- hotelling.test(females.no.obese,PCOS.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-
-```
-
-### interaccion 2
-
-
-```{r}
-columnData.interaccion <- data.frame(obesidad=obesidad,grupo=grupo)
-rownames(columnData.interaccion) <- pacientes
+res <- results(dds.interaccion.lrt)
+res[which(res$padj<0.05),]
 ```
 
 ```{r}
-dds.interaccion <- DESeqDataSetFromMatrix(t(genus.abs),colData = columnData.interaccion,design = ~1+obesidad*grupo)
-dds.interaccion <- DESeq2::estimateSizeFactors(dds.interaccion)
-dds.interaccion <- DESeq2::estimateDispersions(dds.interaccion)
-
-dds.interaccion.nb <- nbinomWaldTest(dds.interaccion)
-dds.interaccion.lrt <- nbinomLRT(dds.interaccion,reduced = ~1)
-datos = as.data.frame(log2(t(assays(dds.interaccion)[["mu"]])/sizeFactors(dds.interaccion)))
-# datos <- log2(t(assays(dds.interaccion)[["mu"]]))
-p1<-fn.densidad(datos = datos,fctr = interaccion)
-p2 <- fn.boxplot(datos = datos,fctr = interaccion)
-pca.log <- prcomp(t(datos),center = T,scale. = T)
-pca.var <- 100*(pca.log$sdev^2/sum(pca.log$sdev^2))
-p3<-graphPCA.methods(pca.log$rotation[,1:2],
-                     datos.common = datos.common,
-                     varianzas=pca.var)+ggtitle("PCA")
-pca.spearman <- princomp(cor(t(datos),method = "spearman"),fix_sign = T,cor=T)
-
-pca.spearman.scores <- pca.spearman$scores
-pca.spearman.var <- 100*(pca.spearman$sdev^2/sum(pca.spearman$sdev^2))
-p4<-graphPCA.methods(pca.spearman.scores[,1:2],
-                 datos.common = datos.common,
-                 varianzas = pca.spearman.var)+ggtitle("PCA spearman")
-
-
-
-mds <- cmdscale(vegdist(datos,method = "euclidean"),eig = T,add = F,k=10)
-varianzas <- 100*mds$eig/sum(mds$eig)
-p5<-graphPCA.methods(datos=mds$points,
-                     datos.common = datos.common,
-                     varianzas = varianzas)+ggtitle("PCoA")
-
-
-p5<-graphPCA.methods(datos=mds$points,
-                     datos.common = datos.common,
-                     varianzas = varianzas)+ggtitle("PCoA")
-
-
-
-p11<-ggarrange(p1,p2,p3,p4,common.legend = T)
-annotate_figure(p11,bottom = "media ajusta y rlog")
-p5
-
-
+res <- results(dds.interaccion.nb,contrast=c("interaccion","No.Obese_Female","Obese_Female"))
+res[which(res$padj<0.05),]
 ```
 
 ```{r}
-datos.interaccion <-  as.data.frame(log2(t(assays(dds.interaccion)[["mu"]])))
+res <- results(dds.interaccion.nb,contrast=c("interaccion","No.Obese_Male","Obese_Male"))
+res[which(res$padj<0.05),]
+```
 
-datos.interaccion$obesidad <- obesidad
-datos.interaccion$grupo <- grupo
-(res.interaccion <- adonis2(dist(datos.interaccion[,-c(95,96)])~datos.interaccion$obesidad*datos.interaccion$grupo))
+```{r}
+res <- results(dds.interaccion.nb,contrast=c("interaccion","No.Obese_PCOS","Obese_PCOS"))
+res[which(res$padj<0.05),]
+```
+
+```{r}
+res <- results(dds.interaccion.nb,contrast=c("interaccion","No.Obese_Female","No.Obese_PCOS"))
+res[which(res$padj<0.05),]
+```
+
+## Multivariante
+
+```{r}
+datos$grupo <- grupo
+datos$obesidad <- obesidad
+datos$interaccion <- interaccion
+#### gruposde interes
+females <- datos[datos$grupo=="Female",-c(95,96,97)]
+males <- datos[datos$grupo=="Male",-c(95,96,97)]
+pcos <- datos[datos$grupo=="PCOS",-c(95,96,97)]
+obesos <- datos[datos$obesidad=="Obese",-c(95,96,97)]
+No.Obesos <- datos[datos$obesidad=="No.Obese",-c(95,96,97)]
+#### interacciones
+females.no.obese <- datos[datos$interaccion=="No.Obese_Female",-c(95,96,97)]
+females.obese <- datos[datos$interaccion=="Obese_Female",-c(95,96,97)]
+males.no.obese <-  datos[datos$interaccion=="No.Obese_Male",-c(95,96,97)]
+males.obese <-  datos[datos$interaccion=="Obese_Male",-c(95,96,97)]
+pcos.no.obese <- datos[datos$interaccion=="No.Obese_PCOS",-c(95,96,97)]
+pcos.obese <- datos[datos$interaccion=="Obese_PCOS",-c(95,96,97)]
+
+```
+
+
+```{r}
+(res<-adonis2(datos[,-c(95,96,97)]~datos$interaccion))
+```
+
+```{r}
+(res<-hotelling.test(females.no.obese,females.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+(res<-hotelling.test(males.no.obese,males.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+(res<-hotelling.test(pcos.no.obese,pcos.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+```
+
+```{r}
+(combinaciones.interaccion <- matrix(c(levels(interaccion)[1:3],levels(interaccion)[4:6]),ncol=2,nrow = 3))
+
+lista.sujetos <- list(No.Obese_Female=females.no.obese,
+                      Obese_Female=females.obese,
+                      No.Obese_PCOS=pcos.no.obese,
+                      Obese_PCOS=pcos.obese,
+                      No.Obese_Male=males.no.obese,
+                      Obese_Male=males.obese)
+## interaccion
+
+matriz.interaccion <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.interaccion)<-apply(combinaciones.interaccion, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.interaccion) <-colnames(genus.abs)
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.interaccion)[1]){
+  x<-lista.sujetos[[combinaciones.interaccion[i,1]]][,j]
+  y <- lista.sujetos[[combinaciones.interaccion[i,2]]][,j]
+  matriz.interaccion[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
+
+w <- which(apply(matriz.interaccion.adj, 1, function(x) any(x<0.05)))
+df.interaccion <-data.frame(matriz.interaccion.adj[w,])
+colnames(df.interaccion) <- colnames(matriz.interaccion.adj)
+rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]
+```
+
+```{r}
+
+lista.graphos1 <- vector("list",length(primera_aprox))
+
+for(i in 1:length(primera_aprox)){
+  
+  datos_i<-data.frame(variable=datos[,primera_aprox[i]])
+  datos_i$interaccion<-interaccion
+  levels(datos_i$interaccion) <- c("No.Obese_Female","Obese_Female",
+                                   "No.Obese_PCOS","Obese_PCOS",
+                                   "No.Obese_Male","Obese_Male")
+  colnames(datos_i) <- c("variable","interaccion")
+  lista.graphos1[[i]]<- ggbetweenstats(datos_i,x = interaccion,y=variable,type = "np",)+ylab(mi_interaccion[i])
+  
+}
+  
+
 ```
 

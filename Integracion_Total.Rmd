@@ -420,6 +420,26 @@ p1
 p2 <- fn.boxplot(t(genus.clr),interaccion)
 p2
 ```
+### Tercera opcion
+
+```{r}
+library(zCompositions)
+genus.imp <- cmultRepl(genus.abs)
+genus.clr <- as.data.frame((matrix(logratio.transfo(t(genus.imp),offset = 2,logratio="ILR"),nrow=94,ncol=46)))
+colnames(genus.clr) <- rownames(genus.abs)
+rownames(genus.clr) <- colnames(genus.abs)
+euc <- vegdist(((genus.imp)),method = "aitchison")
+mds <- cmdscale(euc,k=2,eig=T)
+varianzas <- 100*mds$eig/sum(mds$eig)
+(res <- adonis2(euc~obesidad*grupo))
+graphPCA.methods(mds$points,datos.common = datos.common,varianzas)
+
+
+```
+
+```{r}
+(res <- adonis2(euc~obesidad*grupo,add = T,sqrt.dist = T))
+```
 
 ## IP
 
@@ -487,11 +507,12 @@ ggarrange(p3,p4,p5,p6,ncol=2,nrow=2,common.legend = T)
 ```{r}
 library(MOFA2)
 datos.metaboloma<-((voom(met37_norm,normalize.method = "quantile")$E))
-datos.microbioma <- (as.matrix(genus.clr))
+datos.microbioma <- matrix(logratio.transfo(t(genus.imp),logratio = "ILR",offset = 0.5),nrow=94,ncol=46)
+colnames(datos.microbioma) <- rownames(genus.imp)
+rownames(datos.microbioma) <- colnames(genus.imp)
 datos.clinic <- t((Clin))
 datos.IP <- t((IP.basal))
-datos <- list(metaboloma=(datos.metaboloma),
-IP=datos.IP,Clinic=datos.clinic,microbioma=datos.microbioma)
+datos <- list(metaboloma=datos.metaboloma,IP=datos.IP,Clinic=datos.clinic,microbioma=datos.microbioma)
 MOFAobject <-create_mofa_from_matrix(datos)
 samples_metadata(MOFAobject)<- data.frame(sample=pacientes,obesidad=obesidad,grupo=grupo)
 rownames(samples_metadata(MOFAobject))<-pacientes
@@ -507,12 +528,15 @@ plot_data_overview(MOFAobject)
 
 ```{r}
 data_opts <- get_default_data_options(MOFAobject)
-data_opts$scale_views <-T
+data_opts$scale_views <-F
 head(data_opts)
 ```
 ```{r}
 model_opts <- get_default_model_options(MOFAobject)
+model_opts$likelihoods=c("gaussian","gaussian","gaussian","gaussian")
+model_opts$num_factors=15
 head(model_opts)
+
 
 ```
 
@@ -532,11 +556,7 @@ MOFAobject <- prepare_mofa(
   model_options = model_opts,
   training_options = train_opts
 )
-```
 
-
-
-```{r}
 outfile = file.path(getwd(),"model.hdf5")
 reticulate::use_python("/usr/bin/python3")
 MOFAobject.trained <- run_mofa(MOFAobject, outfile,use_basilisk = F)
@@ -587,7 +607,7 @@ plot_factor(model,
 
 ```{r}
 p <- plot_factor(model, 
-  factors = c(2),
+  factors = c(1,2,3,4),
   color_by = "grupo",
   shape_by = "obesidad",
   dot_size = 3,        # change dot size
@@ -610,7 +630,7 @@ datos.gg$interaccion<-interaction(p$data$color_by,p$data$shape_by)
 datos.gg$interaccion <- factor(datos.gg$interaccion,levels=c("Female.No.Obese","Female.Obese",
                                   "Male.No.Obese","Male.Obese",
                                   "PCOS.No.Obese","PCOS.Obese"))
-ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor2",],y=value,x=interaccion,type="np")
+ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor4",],y=value,x=interaccion,type="np")
 ```
 
 
@@ -621,7 +641,7 @@ ggstatsplot::ggbetweenstats(datos.gg[datos.gg$factor=="Factor2",],y=value,x=inte
 
 ```{r}
 plot_factors(model, 
-  factors = 1,
+  factors = c(1,2,3,4),
   color_by = "grupo",
   shape_by = "obesidad"
 )
@@ -643,7 +663,7 @@ plot_data_scatter(model,
   factor = 2,             # factor of interest
   features = 14,           # number of features to plot (they are selected by weight)
   add_lm = TRUE,          # add linear regression
-  color_by = "grupo",
+  color_by = "obesidad",
   shape_by="obesidad"
 )
 ```
@@ -703,7 +723,8 @@ factores.recast$interaccion <- interaction(factores.recast$obesidad,factores.rec
 ```{r}
 names(weights.recast$Factor1) <- weights.recast$feature
 names(factores.recast$Factor1) <- factores.recast$sample
-outerprod <-t((as.matrix((weights.recast[,2:5])) %*% t(as.matrix(factores.recast[,2:5]))))
+outerprod <-  as.matrix(factores.recast[,2:4]) %*% t(weights.recast[,2:4])
+outerprod <- factores.recast$Factor1 %o% weights.recast$Factor1
 rownames(outerprod) <- factores.recast$sample
 colnames(outerprod) <- weights.recast$feature
 outerprod <- as.data.frame(outerprod)

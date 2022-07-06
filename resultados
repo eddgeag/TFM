@@ -1,12 +1,31 @@
+(combinaciones.interaccion <- matrix(c(levels(interaccion)[1:3],levels(interaccion)[4:6]),ncol=2,nrow = 3))
 
-Primera aproximacion
-Haemophilus
-Intestinibacter
-Anaerotruncus                          
-Christensenella               
-Eisenbergiella                        
-Granulicatella                          
-Neisseria                        
-Romboutsia                          
-Saccharibacteria_genera_incertae_sedis
-Staphylococcus
+lista.sujetos <- list(No.Obese_Female=females.no.obese,
+                      Obese_Female=females.obese,
+                      No.Obese_PCOS=pcos.no.obese,
+                      Obese_PCOS=pcos.obese,
+                      No.Obese_Male=males.no.obese,
+                      Obese_Male=males.obese)
+## interaccion
+
+matriz.interaccion <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.interaccion)<-apply(combinaciones.interaccion, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.interaccion) <-colnames(genus.abs)
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.interaccion)[1]){
+  x<-lista.sujetos[[combinaciones.interaccion[i,1]]][,j]
+  y <- lista.sujetos[[combinaciones.interaccion[i,2]]][,j]
+  matriz.interaccion[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
+
+w <- which(apply(matriz.interaccion.adj, 1, function(x) any(x<0.05)))
+df.interaccion <-data.frame(matriz.interaccion.adj[w,])
+colnames(df.interaccion) <- colnames(matriz.interaccion.adj)
+rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]

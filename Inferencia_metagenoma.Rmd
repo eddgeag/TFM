@@ -547,17 +547,15 @@ for( i in 1:ncol(genus.abs)){
 
 ```{r}
 library(zCompositions)
-genus.imput <- genus.abs
-genus.imput[Y==-2]<- 1
-label.true <- ifelse(y.fit==1 & ylogit==0,1,0)
 
-genus.imput2 <-cmultRepl(X = genus.imput,label = 0)
+
+genus.imput <-cmultRepl(X = genus.abs,label = 0)
 
 ```
 
 
 ```{r}
-G <-matrix(t(logratio.transfo(t(genus.imput2),logratio = "CLR")),ncol=ncol(genus.abs),nrow(genus.abs))
+G <-matrix(t(logratio.transfo(t(genus.imput),logratio = "CLR")),ncol=ncol(genus.abs),nrow(genus.abs))
 # datos <- t(rlog(counts(dds.interaccion.nb.2)))
 datos = as.data.frame(G)
 p1<-fn.densidad(datos = datos,fctr = interaccion)
@@ -568,7 +566,7 @@ p3<-graphPCA.methods(pca.log$x[,1:2],
                      datos.common = datos.common,
                      varianzas=pca.var)+ggtitle("PCA")
 
-mds <- cmdscale(vegdist(genus.imput2,method = "aitchison"),eig = T,add = F,k=10)
+mds <- cmdscale(vegdist(genus.imput,method = "aitchison"),eig = T,add = F,k=10)
 varianzas <- 100*mds$eig/sum(mds$eig)
 pca.spearman <- princomp(mds$points,fix_sign = F,cor=T)
 
@@ -580,7 +578,7 @@ p4<-graphPCA.methods(pca.spearman.scores[,1:2],
 
 
 
-mds <- cmdscale(vegdist(genus.imput2,method = "aitchison"),eig = T,add = F,k=10)
+mds <- cmdscale(vegdist(genus.imput,method = "aitchison"),eig = T,add = F,k=10)
 varianzas <- 100*mds$eig/sum(mds$eig)
 p5<-graphPCA.methods(datos=mds$points,
                      datos.common = datos.common,
@@ -600,30 +598,33 @@ annotate_figure(p11,bottom = "media ajusta y rlog")
 ```
 
 ```{r}
-adonis2(genus.imput2~obesidad*grupo,method="aitchison",permutations = 10000)
+adonis2(genus.imput~obesidad*grupo,method="aitchison",permutations = 10000)
 ```
 
 ```{r}
-# library(ALDEx2)
-#  mm <- model.matrix(~ obesidad*grupo)
-#  x <- aldex.clr(t(genus.imput), mm, mc.samples=1000, denom="all", verbose=T)
-#  glm.test <- aldex.glm(x, mm)
+library(ALDEx2)
+ x <- aldex.clr(t(genus.abs), interaccion, mc.samples=1000, denom="all", verbose=T)
 ```
+```{r}
+x.kw <- aldex.kw(x)
+```
+
+
+
 ```{r}
 # rownames(glm.test[glm.test$`(Intercept) Pr(>|t|).BH`<0.05,])
 ```
 
 ```{r}
-# library(ALDEx2)
-#  mm <- model.matrix(~0+interaccion)
-#  x <- aldex.clr(t(genus.imput), mm, mc.samples=1000, denom="all", verbose=T)
-#  glm.test <- aldex.glm(x, mm)
+ # mm <- model.matrix(~obesidad*grupo)
+ # x <- aldex.clr(t(genus.abs), mm, mc.samples=1000, denom="all", verbose=T)
+ # glm.test <- aldex.glm(x, mm)
 ```
 
 
 
 ```{r}
-datos <-as.data.frame(G)
+datos <-as.data.frame(genus.abs)
 datos$grupo <- grupo
 datos$obesidad <- obesidad
 datos$interaccion <- interaccion
@@ -643,42 +644,25 @@ pcos.obese <- datos[datos$interaccion=="Obese_PCOS",-c(95,96,97)]
 ```
 
 
-
 ```{r}
-
+fn.comparacion <- function(sujetos,obesidad,grupo,lev){
+  
+  resultados <- vector("list",length = length(levels(grupo)))
+  nombre <- vector("character",length=length(levels(grupo)))
+  obesidad.sujeto <- obesidad[which(variables_in_bacteria$GROUP==lev)]
+  x <- aldex.clr(t(sujetos), conds=obesidad.sujeto, mc.samples=1000, denom="all", verbose=T)
+  x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T)
+  return(x.tt)
+}
 ```
 
 
-
-
 ```{r}
-G<-as.data.frame(G)
-colnames(G) <- colnames(genus.abs)
-G$obesidad<-obesidad
-G$grupo<-grupo
-ggplot(G,aes(x=grupo,y=Abiotrophia,fill=obesidad))+geom_boxplot()
-```
-```{r}
-library(Hotelling)
-(res<-hotelling.test(females,males,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(res<-hotelling.test(females,pcos,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(res<-hotelling.test(males,pcos,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(res<-hotelling.test(obesos,No.Obesos,shrinkage = T,var.equal = T,perm = T,B=100))
-
-
-(res<-hotelling.test(females.no.obese,females.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(res<-hotelling.test(pcos.no.obese,pcos.obese,shrinkage = T,var.equal = T,perm = T,B=100))
-
-(res<-hotelling.test(males.no.obese,males.obese,shrinkage = T,var.equal = T,perm = T,B=100))
+res.females <- fn.comparacion(females,obesidad,grupo,"Female")
+res.males <- fn.comparacion(males,obesidad,grupo,"Male")
+res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS")
 
 ```
-
 
 
 

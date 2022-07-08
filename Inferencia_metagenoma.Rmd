@@ -601,14 +601,14 @@ annotate_figure(p11,bottom = "media ajusta y rlog")
 adonis2(genus.imput~obesidad*grupo,method="aitchison",permutations = 10000)
 ```
 
-```{r}
-library(ALDEx2)
- x <- aldex.clr(t(genus.abs), interaccion, mc.samples=1000, denom="all", verbose=T)
-```
-```{r}
-x.kw <- aldex.kw(x)
-```
-
+# ```{r}
+# library(ALDEx2)
+#  x <- aldex.clr(t(genus.abs), interaccion, mc.samples=1000, denom="all", verbose=T)
+# ```
+# ```{r}
+# x.kw <- aldex.kw(x)
+# ```
+# 
 
 
 ```{r}
@@ -658,6 +658,7 @@ fn.comparacion <- function(sujetos,obesidad,grupo,lev){
 
 
 ```{r}
+library(ALDEx2)
 res.females <- fn.comparacion(females,obesidad,grupo,"Female")
 res.males <- fn.comparacion(males,obesidad,grupo,"Male")
 res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS")
@@ -665,4 +666,21 @@ res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS")
 ```
 
 
+```{r}
+library(Hotelling)
+
+(res <- hotelling.test(t(pcos)~t(females),shrikage=T,var.equal=F,perm=T,B=10000))
+(res <- hotelling.test(t(pcos)~t(males),shrikage=T,var.equal=F,perm=T,B=10000))
+(res <- hotelling.test(t(males)~t(females),shrikage=T,var.equal=F,perm=T,B=10000))
+
+```
+
+
+```{r}
+(res <- hotelling.test(t(obesos)~t(No.Obesos),shrikage=T,var.equal=F,perm=T,B=10000))
+(res <- hotelling.test(t(pcos.no.obese)~t(pcos.obese),shrikage=T,var.equal=F,perm=T,B=10000))
+(res <- hotelling.test(t(males.no.obese)~t(males.obese),shrikage=T,var.equal=F,perm=T,B=10000))
+(res <- hotelling.test(t(females.no.obese)~t(females.obese),shrikage=T,var.equal=F,perm=T,B=10000))
+
+```
 

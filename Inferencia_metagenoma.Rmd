@@ -654,6 +654,9 @@ fn.comparacion <- function(sujetos,obesidad,grupo,lev){
   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T)
   return(x.tt)
 }
+  x <- aldex.clr(t(rbind(females,pcos,males)), conds=grupo, mc.samples=1000, denom="all", verbose=T)
+  x.tt <- aldex.kw(x, verbose=T)
+
 ```
 
 
@@ -662,7 +665,6 @@ library(ALDEx2)
 res.females <- fn.comparacion(females,obesidad,grupo,"Female")
 res.males <- fn.comparacion(males,obesidad,grupo,"Male")
 res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS")
-
 ```
 
 

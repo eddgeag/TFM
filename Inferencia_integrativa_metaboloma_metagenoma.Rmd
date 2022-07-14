@@ -369,6 +369,11 @@ pcx <- prcomp(t(X),scale=F,center=T)
 varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
 p3<-graphPCA.methods(pcx$x,datos.common,varianzas)+ggtitle("PCA")
 
+U3 <- pcx$x
+apply(U3, 2, function(x) which( abs(x - mean(x)) > (6 * sd(x)) ))
+
+
+
 pcx.cor <- princomp(x=cor((X),method = "spearman"),cor=T)
 varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
 p4<-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)+ggtitle("PCA spearman")
@@ -414,6 +419,34 @@ genus.abs <- low.count.removal.counts(genus,10)$data.filter
 library(zCompositions)
 genus.imput <-cmultRepl(X = genus.abs,label = 0)
 G <-matrix(t(logratio.transfo(t(genus.imput),logratio = "CLR")),ncol=ncol(genus.abs),nrow(genus.abs))
+X<-t(G)
+p1<-fn.densidad((t(X)),interaccion)
+p2<-fn.boxplot(t(X),interaccion)
+pcx <- prcomp(t(X),scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+p3<-graphPCA.methods(pcx$x,datos.common,varianzas)+ggtitle("PCA")
+
+U3 <- pcx$x
+apply(U3, 2, function(x) which( abs(x - mean(x)) > (6 * sd(x)) ))
+
+
+
+pcx.cor <- princomp(x=cor((X),method = "spearman"),cor=T)
+varianzas <- 100*(pcx.cor$sdev^2/sum(pcx.cor$sdev^2))
+p4<-graphPCA.methods(pcx.cor$scores[,1:2],datos.common,varianzas)+ggtitle("PCA spearman")
+
+plsda.met <- plsda(t(X),interaccion,scale = T)
+p5<-graphPCA.methods(plsda.met$variates$X,datos.common,varianzas)+ggtitle("PLS-DA")
+
+
+euc <- vegdist(t(X),method = "euclidean")
+points<-cmdscale(euc)
+p6<-graphPCA.methods(points,datos.common,varianzas)+ggtitle("MDS")
+ggarrange(p1,p2,common.legend = T)
+ggarrange(p3,p4,p5,p6,ncol=2,nrow=2,common.legend = T)
+
+(res<-adonis2(euc~obesidad*grupo))
+(res<-adonis2(plsda.met$X~obesidad*grupo,method = "euclidean"))
 
 ```
 ## Integracion
@@ -985,5 +1018,569 @@ library(corrplot)
 corrplot::corrplot(mycor, p.mat = testRes$p, method = 'color', diag = F,
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.7,
          insig = 'label_sig', pch.col = 'white')
+```
+### PLSDA
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+plsda.int <- plsda(Y,interaccion)
+p5<-graphPCA.methods(plsda.int$variates$X,datos.common,varianzas=c(plsda.int$prop_expl_var$X[1],plsda.int$prop_expl_var$X[2]))+ggtitle("PLS-DA")
+p5
+```
+
+
+
+
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+datos <- list(metaboloma=t(metaboloma),microbioma=(G))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="PCOS"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="PCOS"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Female"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Female"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="No Obese"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="Obese"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_PCOS"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_PCOS"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_PCOS"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="Obese_PCOS"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Female"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Female"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Female"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Female"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Male"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Male"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
+G <- as.data.frame(G)
+colnames(G) <- colnames(genus.abs)
+rownames(G) <- rownames(genus.abs)
+
+metaboloma.pcos <- metaboloma[,colnames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Male"]]
+
+G.pcos <- G[rownames(G) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Male"],]
+
+datos <- list(metaboloma=t(metaboloma.pcos),microbioma=(G.pcos))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- Y[Y$view=="metaboloma",-ncol(Y)]
+microbioma <- Y[Y$view=="microbioma",-ncol(Y)]
+datos <- list(metaboloma=t(metaboloma),microbioma=t(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="Obese"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="Obese"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="No Obese"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$OBESE=="No Obese"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$SEX=="Female"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$SEX=="Female"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$SEX=="Male"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$SEX=="Male"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Female"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Female"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="Male"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="PCOS"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[variables_in_bacteria$GROUP=="PCOS"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Female"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Female"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Female"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Female"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_PCOS"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_PCOS"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_PCOS"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_PCOS"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Male"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="No.Obese_Male"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <- t(Y[Y$view=="metaboloma",-ncol(Y)])
+metaboloma <- metaboloma[rownames(metaboloma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Male"],]
+microbioma <- t(Y[Y$view=="microbioma",-ncol(Y)])
+microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente[interaccion=="Obese_Male"],]
+
+datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
+res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
+(rho<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+```
+
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+pcx.met <- prcomp((Y[Y$view=="metaboloma",-ncol(Y)]))
+pcx.varianzas <- 100*pcx.met$sdev^2/sum(pcx.met$sdev^2)
+p1 <- graphPCA.methods(pcx.met$rotation,datos.common,pcx.varianzas)
+p2 <- graphPCA.methods2(pcx.met$rotation,datos.common,pcx.varianzas)
+ggarrange(p1,p2)
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <-t(Y[Y$view=="metaboloma",-ncol(Y)])
+
+adonis2(metaboloma~obesidad*grupo,method = "euclidean")
+```
+
+
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+pcx.met <- prcomp((Y[Y$view=="microbioma",-ncol(Y)]))
+pcx.varianzas <- 100*pcx.met$sdev^2/sum(pcx.met$sdev^2)
+p1 <- graphPCA.methods(pcx.met$rotation,datos.common,pcx.varianzas)
+p2 <- graphPCA.methods2(pcx.met$rotation,datos.common,pcx.varianzas)
+ggarrange(p1,p2)
+```
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+Y$view <- c(rep("metaboloma",37),rep("microbioma",94))
+
+metaboloma <-t(Y[Y$view=="microbioma",-ncol(Y)])
+
+adonis2(metaboloma~obesidad*grupo,method = "euclidean")
+```
+
+
+```{r}
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+
+Y <- as.data.frame(t(Y))
+adonis2(dist(t(Y))~obesidad*grupo)
+```
+```{r}
+
+datos <-as.data.frame(t(Y))
+grupo<-variables_in_bacteria$GROUP
+obesidad <- factor(gsub(" ",".",variables_in_bacteria$OBESE))
+interaccion<-factor(paste(obesidad,grupo,sep="_"))
+datos$grupo <- grupo
+datos$obesidad <- obesidad
+datos$interaccion <- interaccion
+#### gruposde interes
+females <- datos[datos$grupo=="Female",-c(134,133,132)]
+males <- datos[datos$grupo=="Male",-c(2134,133,132)]
+pcos <- datos[datos$grupo=="PCOS",-c(134,133,132)]
+obesos <- datos[datos$obesidad=="Obese",-c(134,133,132)]
+No.Obesos <- datos[datos$obesidad=="No.Obese",-c(134,133,132)]
+#### interacciones
+females.no.obese <- datos[datos$interaccion=="No.Obese_Female",-c(134,133,132)]
+females.obese <- datos[datos$interaccion=="Obese_Female",-c(134,133,132)]
+males.no.obese <-  datos[datos$interaccion=="No.Obese_Male",-c(134,133,132)]
+males.obese <-  datos[datos$interaccion=="Obese_Male",-c(134,133,132)]
+pcos.no.obese <- datos[datos$interaccion=="No.Obese_PCOS",-c(134,133,132)]
+pcos.obese <- datos[datos$interaccion=="Obese_PCOS",-c(134,133,132)]
+
+```
+
+
+
+```{r}
+(res <- hotelling.test(obesos[,-c(134,133,132)],No.Obesos[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=1000))
+```
+
+```{r}
+(res <- hotelling.test(males[,-c(134,133,132)],females[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(pcos[,-c(134,133,132)],males[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(pcos[,-c(134,133,132)],females[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+```
+
+```{r}
+(res <- hotelling.test(males.no.obese[,-c(134,133,132)],males.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(females.no.obese[,-c(134,133,132)],females.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(pcos.no.obese[,-c(134,133,132)],pcos.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+```
+
+
+```{r}
+(res <- hotelling.test(males.no.obese[,-c(134,133,132)],pcos.no.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(females.no.obese[,-c(134,133,132)],pcos.no.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(males.no.obese[,-c(134,133,132)],females.no.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+```
+```{r}
+(res <- hotelling.test(males.obese[,-c(134,133,132)],pcos.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(females.obese[,-c(134,133,132)],pcos.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
+(res <- hotelling.test(males.obese[,-c(134,133,132)],females.obese[,-c(134,133,132)],shrinkage = T,var.equal = F,perm = T,B=100))
 ```
 

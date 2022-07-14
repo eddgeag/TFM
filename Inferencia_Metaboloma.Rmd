@@ -457,6 +457,8 @@ ggarrange(p3,p4,p5,p6,ncol=2,nrow=2,common.legend = T)
 # }
 # 
 # pslist
+
+ggarrange(p1,p2,p3,p5,common.legend = T)
 ```
 
 
@@ -480,6 +482,10 @@ datos<-as.data.frame(t(X))
 ```{r}
 datos$grupo <- variables_in_bacteria$GROUP
 datos$obesos <- variables_in_bacteria$OBESE
+datos$sexo <- variables_in_bacteria$SEX
+Females2 <- datos[datos$grupo=="Female",1:37]
+Males2 <- datos[datos$grupo=="Male",1:37]
+
 Females <- datos[datos$grupo=="Female",1:37]
 Males <- datos[datos$grupo=="Male",1:37]
 PCOS <- datos[datos$grupo=="PCOS",1:37]
@@ -499,6 +505,23 @@ Males.Obese <- datos[datos$grupo=="Male" & datos$obesos=="Obese",1:37]
 
 ```
 
+```{r}
+(fit.sex <-hotelling.test((Females2),(Males),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+```{r}
+(fit.sex <-hotelling.test((PCOS.NOOBESE),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B=10000))
+```
+
+```{r}
+(fit.sex <-hotelling.test((PCOS.OBESE),(Females.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+```{r}
+(fit.sex <-hotelling.test((PCOS.OBESE),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+```{r}
+(fit.sex <-hotelling.test((PCOS.NOOBESE),(Females.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+```
+
 
 ```{r}
 (fit.ob <-hotelling.test((Obese),(No.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
@@ -515,16 +538,24 @@ Males.Obese <- datos[datos$grupo=="Male" & datos$obesos=="Obese",1:37]
 
 
 ```{r}
-(fit.Noobesemale <- hotelling.test((Males.NO.Obese),(Males.Obese),perm = T,var.equal = F,shrinkage = T,B=100))
+(fit.Noobesemale <- hotelling.test((Males.NO.Obese),(Males.Obese),perm = T,var.equal = F,shrinkage = T,B=1000))
 ```
 
 ```{r}
-(fit.NoobesePCOS <- hotelling.test((PCOS.NOOBESE),(PCOS.OBESE),perm = T,var.equal = F,shrinkage = T,B=100))
+(fit.NoobesePCOS <- hotelling.test((PCOS.NOOBESE),(PCOS.OBESE),perm = T,var.equal = F,shrinkage = T,B=1000))
 ```
 
 ```{r}
-(fit.females <- hotelling.test((Females.Obese),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 100))
+(fit.females <- hotelling.test((Females.Obese),(Females.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 1000))
 ```
+```{r}
+(fit.females <- hotelling.test((Females.NO.Obese),(Males.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 100))
+```
+```{r}
+(fit.females <- hotelling.test((Females.Obese),(Males.NO.Obese),perm = T,var.equal = F,shrinkage = T,B = 1000))
+```
+
+
 
 ```{r}
 datos <- as.data.frame(t(voom(met37_norm,normalize.method = "quantile")$E))
@@ -619,7 +650,7 @@ for(i in 1:dim(combinaciones.interaccion)[1]){
 
 matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
 
-
+csa<-t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH")))
 # 
 # 
 # 
@@ -697,5 +728,88 @@ p4 <- ggplot(datos, aes(grupo, Serine_mean, fill=interaction(grupo,obesidad), do
   scale_fill_manual(values=c("black","red","green","gray", "darkred","darkgreen"))
 
 ggarrange(p1,p2,p3,p4,ncol=2,nrow=2,common.legend = T)
+```
+
+
+
+```{r}
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS<0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male>0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female>0.05,]
+
+```
+
+```{r}
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS>0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male>0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female<0.05,]
+```
+
+```{r}
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS>0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male<0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female>0.05,]
+```
+
+```{r}
+p1 <-ggplot(datos, aes(grupo, Citrate_mean, fill=interaction(grupo,obesidad), dodge=grupo)) +
+  stat_boxplot(geom ='errorbar')+
+  geom_boxplot()+
+  scale_fill_manual(values=c("black","red","green","gray", "darkred","darkgreen"))
+
+p2 <-ggplot(datos, aes(grupo, Isoleu_mean, fill=interaction(grupo,obesidad), dodge=grupo)) +
+  stat_boxplot(geom ='errorbar')+
+  geom_boxplot()+
+  scale_fill_manual(values=c("black","red","green","gray", "darkred","darkgreen"))
+
+p3 <-ggplot(datos, aes(grupo, Valine_mean, fill=interaction(grupo,obesidad), dodge=grupo)) +
+  stat_boxplot(geom ='errorbar')+
+  geom_boxplot()+
+  scale_fill_manual(values=c("black","red","green","gray", "darkred","darkgreen"))
+
+p4 <-ggplot(datos, aes(grupo, Oxoisocaproic_mean, fill=interaction(grupo,obesidad), dodge=grupo)) +
+  stat_boxplot(geom ='errorbar')+
+  geom_boxplot()+
+  scale_fill_manual(values=c("black","red","green","gray", "darkred","darkgreen"))
+
+ggarrange(p1,p2,p3,p4,ncol=2,nrow=2,common.legend = T)
+
+```
+
+```{r}
+ggbetweenstats(datos,x=obesidad,y=Oxoisocaproic_mean,type = "np")
+```
+
+```{r}
+df.grupo[df.grupo$Female_vs_PCOS<0.05 & df.grupo$Female_vs_Male>0.05&df.grupo$PCOS_vs_Male>0.05,]
+```
+
+
+```{r}
+df.grupo[df.grupo$Female_vs_PCOS>0.05 & df.grupo$Female_vs_Male<0.05&df.grupo$PCOS_vs_Male>0.05,]
+
+```
+
+
+```{r}
+df.grupo[df.grupo$Female_vs_PCOS>0.05 & df.grupo$Female_vs_Male>0.05&df.grupo$PCOS_vs_Male<0.05,]
+
+```
+
+
+```{r}
+graphPCA.methods2 <- function(datos,datos.common,varianzas){
+  
+  
+  sujetos <-as.data.frame(datos)
+  sexo<-datos.common$GROUP
+  obesidad<-datos.common$OBESE
+  colnames(sujetos)<-c("PC1","PC2")
+  p1<-ggplot(sujetos,aes(x=PC1, y=PC2)) +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = obesidad,shape=sexo,fill=obesidad), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(sujetos[,1]),max(sujetos[,1]))) +
+     scale_color_manual(values=c("black","red"))+scale_shape_manual(values=c(17,15,14))+xlab(paste("PC1",round(varianzas[1],2),"%"))+ylab(paste("PC2",round(varianzas[2],2),"%"))
+  return(p1)
+}
+pcx <- prcomp(t(X),scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+p3<-graphPCA.methods2(pcx$x,datos.common,varianzas)+ggtitle("PCA")
+p3
 ```
 

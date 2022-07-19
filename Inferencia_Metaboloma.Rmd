@@ -650,23 +650,6 @@ for(i in 1:dim(combinaciones.interaccion)[1]){
 
 matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
 
-csa<-t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH")))
-# 
-# 
-# 
-# for(j in 1:94){
-# for(i in 1:dim(combinaciones)[1]){
-#   print(colnames(lista.sujetos[[combinaciones[i,1]]])[j])
-#   x<-lista.sujetos[[combinaciones[i,1]]][,j]
-#   y <- lista.sujetos[[combinaciones[i,2]]][,j]
-#   lista.pvalores[j,i]<-wilcox.test(x,y)$p.value
-# 
-#   
-# }
-# }
-# 
-# p.adj_valores <-as.data.frame(apply(lista.pvalores, 1,function(x) p.adjust(x,method = "BH")))
-# colnames(p.adj_valores) <- rownames(genus.t)
 ```
 
 ## univariante a mi manera
@@ -735,7 +718,7 @@ ggarrange(p1,p2,p3,p4,ncol=2,nrow=2,common.legend = T)
 ```{r}
 df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS<0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male>0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female>0.05,]
 
-```
+```  
 
 ```{r}
 df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS>0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male>0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female<0.05,]

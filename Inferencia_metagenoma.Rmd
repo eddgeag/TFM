@@ -378,7 +378,7 @@ IP.basal <- IP.tmp[,-w]
 rownames(IP.basal) <- sujetos
 ```
 
-## Metabolome data (37)
+## Metabolome data (94)
 
 ```{r}
 metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
@@ -549,13 +549,14 @@ for( i in 1:ncol(genus.abs)){
 library(zCompositions)
 
 
-genus.imput <-cmultRepl(X = genus.abs,label = 0)
+genus.imput <-cmultRepl(X = genus.abs,label = 0,output = "p-counts")
 
 ```
-
-
 ```{r}
+
+
 G <-matrix(t(logratio.transfo(t(genus.imput),logratio = "CLR")),ncol=ncol(genus.abs),nrow(genus.abs))
+
 # datos <- t(rlog(counts(dds.interaccion.nb.2)))
 datos = as.data.frame(G)
 p1<-fn.densidad(datos = datos,fctr = interaccion)
@@ -601,14 +602,14 @@ annotate_figure(p11,bottom = "media ajusta y rlog")
 adonis2(genus.imput~obesidad*grupo,method="aitchison",permutations = 10000)
 ```
 
-# ```{r}
-# library(ALDEx2)
-#  x <- aldex.clr(t(genus.abs), interaccion, mc.samples=1000, denom="all", verbose=T)
-# ```
-# ```{r}
-# x.kw <- aldex.kw(x)
-# ```
-# 
+```{r}
+ library(ALDEx2)
+x <- aldex.clr(t(genus.abs), obesidad, mc.samples=1000, denom="all", verbose=T)
+```
+```{r}
+ x.kw <- aldex.ttest(x)
+```
+
 
 
 ```{r}
@@ -645,44 +646,200 @@ pcos.obese <- datos[datos$interaccion=="Obese_PCOS",-c(95,96,97)]
 
 
 ```{r}
-fn.comparacion <- function(sujetos,obesidad,grupo,lev){
+genus.clr <- t(logratio.transfo(t(genus.imput),logratio = "CLR"))
+colnames(genus.clr) <-colnames(genus.abs)
+rownames(genus.clr) <- rownames(genus.abs)
+
+```
+
+```{r}
+
+grupo<-variables_in_bacteria$GROUP
+obesidad <- factor(gsub(" ",".",variables_in_bacteria$OBESE))
+interaccion<-factor(paste(obesidad,grupo,sep="_"))
+(combinaciones.interaccion <- matrix(c(levels(interaccion)[1:3],levels(interaccion)[4:6]),ncol=2,nrow = 3))
+combinaciones.grupo <- t(combn(levels(grupo),2))
+combinaciones.obesos <- t(combn(levels(obesidad),2))
+lista.obesos <- list(Obese=obesos,No.Obese=No.Obesos)
+lista.grupo <- list(Female=females,Male=males,PCOS=pcos)
+lista.sujetos <- list(No.Obese_Female=females.no.obese,
+                      Obese_Female=females.obese,
+                      No.Obese_PCOS=pcos.no.obese,
+                      Obese_PCOS=pcos.obese,
+                      No.Obese_Male=males.no.obese,
+                      Obese_Male=males.obese)
+
+matriz.obesos <- as.data.frame(matrix(NA,ncol=1,nrow=94))
+colnames(matriz.obesos)<-apply(combinaciones.obesos, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.obesos) <-colnames(datos)[-c(96,95,8)]
+
+## obesos
+
+for(j in 1:94){
+for(i in 1:dim(combinaciones.obesos)[1]){
+  x<-lista.obesos[[combinaciones.obesos[i,1]]][,j]
+  y <- lista.obesos[[combinaciones.obesos[i,2]]][,j]
+  matriz.obesos[j,i]<-wilcox.test(x,y)$p.value
+
   
-  resultados <- vector("list",length = length(levels(grupo)))
-  nombre <- vector("character",length=length(levels(grupo)))
-  obesidad.sujeto <- obesidad[which(variables_in_bacteria$GROUP==lev)]
-  x <- aldex.clr(t(sujetos), conds=obesidad.sujeto, mc.samples=1000, denom="all", verbose=T)
-  x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T)
-  return(x.tt)
 }
-  x <- aldex.clr(t(rbind(females,pcos,males)), conds=grupo, mc.samples=1000, denom="all", verbose=T)
-  x.tt <- aldex.kw(x, verbose=T)
+}
 
+matriz.grupo <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.grupo)<-apply(combinaciones.grupo, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.grupo) <-colnames(datos)[-c(96,95,94)]
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.grupo)[1]){
+  x<-lista.grupo[[combinaciones.grupo[i,1]]][,j]
+  y <- lista.grupo[[combinaciones.grupo[i,2]]][,j]
+  matriz.grupo[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.grupo.adj <- as.data.frame(t(apply(matriz.grupo, 1, function(x) p.adjust(x,method="BH"))))
+
+
+## interaccion
+
+matriz.interaccion <- as.data.frame(matrix(NA,ncol=3,nrow=94))
+colnames(matriz.interaccion)<-apply(combinaciones.interaccion, 1, function(x) paste(x[1],x[2],sep="_vs_"))
+rownames(matriz.interaccion) <-colnames(datos)[-c(96,95,94)]
+
+## grupo
+for(j in 1:94){
+for(i in 1:dim(combinaciones.interaccion)[1]){
+  x<-lista.sujetos[[combinaciones.interaccion[i,1]]][,j]
+  y <- lista.sujetos[[combinaciones.interaccion[i,2]]][,j]
+  matriz.interaccion[j,i]<-wilcox.test(x,y)$p.value
+
+  
+}
+}
+
+matriz.interaccion.adj <- as.data.frame(t(apply(matriz.interaccion, 1, function(x) p.adjust(x,method="BH"))))
+df.obesos <-data.frame(obesos_vs_no.obesos=matriz.obesos[which(matriz.obesos[,1]<0.05),])
+rownames(df.obesos) <- rownames(matriz.obesos)[which(matriz.obesos[,1]<0.05)]
+df.obesos
+w <- which(apply(matriz.grupo.adj, 1, function(x) any(x<0.05)))
+df.grupo <-data.frame(matriz.grupo.adj[w,])
+w <- which(apply(matriz.interaccion.adj, 1, function(x) any(x<0.05)))
+df.interaccion <-data.frame(matriz.interaccion.adj[w,])
+colnames(df.interaccion) <- colnames(matriz.interaccion.adj)
+rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]
+```
+```{r}
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS<0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male>0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female>0.05,]
+```
+```{r}
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS>0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male<0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female>0.05,]
 ```
 
 
 ```{r}
-library(ALDEx2)
-res.females <- fn.comparacion(females,obesidad,grupo,"Female")
-res.males <- fn.comparacion(males,obesidad,grupo,"Male")
-res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS")
+df.interaccion[df.interaccion$No.Obese_PCOS_vs_Obese_PCOS>0.05 & df.interaccion$No.Obese_Male_vs_Obese_Male<0.05 & df.interaccion$No.Obese_Female_vs_Obese_Female<0.05,]
 ```
-
 
 ```{r}
-library(Hotelling)
-
-(res <- hotelling.test(t(pcos)~t(females),shrikage=T,var.equal=F,perm=T,B=10000))
-(res <- hotelling.test(t(pcos)~t(males),shrikage=T,var.equal=F,perm=T,B=10000))
-(res <- hotelling.test(t(males)~t(females),shrikage=T,var.equal=F,perm=T,B=10000))
-
+df.grupo[df.grupo$Female_vs_PCOS <0.05 &df.grupo$Female_vs_Male>0.05 & df.grupo$PCOS_vs_Male>0.05,]
 ```
-
+```{r}
+df.grupo[df.grupo$Female_vs_PCOS >0.05 &df.grupo$Female_vs_Male<0.05 & df.grupo$PCOS_vs_Male>0.05,]
+```
+```{r}
+df.grupo[df.grupo$Female_vs_PCOS >0.05 &df.grupo$Female_vs_Male>0.05 & df.grupo$PCOS_vs_Male<0.05,]
+```
+```{r}
+rownames(df.obesos)[which(df.obesos$obesos_vs_no.obesos<0.05)]
+```
 
 ```{r}
-(res <- hotelling.test(t(obesos)~t(No.Obesos),shrikage=T,var.equal=F,perm=T,B=10000))
-(res <- hotelling.test(t(pcos.no.obese)~t(pcos.obese),shrikage=T,var.equal=F,perm=T,B=10000))
-(res <- hotelling.test(t(males.no.obese)~t(males.obese),shrikage=T,var.equal=F,perm=T,B=10000))
-(res <- hotelling.test(t(females.no.obese)~t(females.obese),shrikage=T,var.equal=F,perm=T,B=10000))
-
+(res <-hotelling.test(obesos,No.Obesos,shrinkage = T,var.equal = F,perm = T,B=1000))
 ```
+
+
+<!-- ```{r} -->
+<!-- library(ALDEx2) -->
+<!-- fn.comparacion <- function(sujetos,obesidad,grupo,lev){ -->
+
+<!--   resultados <- vector("list",length = length(levels(grupo))) -->
+<!--   nombre <- vector("character",length=length(levels(grupo))) -->
+<!--   obesidad.sujeto <- obesidad[which(variables_in_bacteria$GROUP==lev)] -->
+<!--   x <- aldex.clr(t(sujetos), conds=obesidad.sujeto, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!--   return(x.tt) -->
+<!-- } -->
+<!--   x <- aldex.clr(t(rbind(females,pcos,males)), conds=grupo, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.kw(x, verbose=T) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- library(ALDEx2) -->
+<!-- res.females <- fn.comparacion(females,obesidad,grupo,"Female") -->
+<!-- res.males <- fn.comparacion(males,obesidad,grupo,"Male") -->
+<!-- res.pcos <- fn.comparacion(pcos,obesidad,grupo,"PCOS") -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+
+<!--   conds <- c(rep("Females",16),rep("PCOS",15)) -->
+<!--   x <- aldex.clr(t(rbind(females,pcos)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!--   conds <- c(rep("Females",16),rep("Males",15)) -->
+<!--   x <- aldex.clr(t(rbind(females,males)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!--   conds <- c(rep("pcos",15),rep("Males",15)) -->
+<!--   x <- aldex.clr(t(rbind(pcos,males)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!--   conds <- c(rep("pcos.no.obese",7),rep("females.no.obese",8)) -->
+<!--   x <- aldex.clr(t(rbind(pcos.no.obese,females.no.obese)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!--   conds <- c(rep("pcos.obese",8),rep("females.obese",8)) -->
+<!--   x <- aldex.clr(t(rbind(pcos.obese,females.obese)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!--   conds <- c(rep("pcos.no.obese",7),rep("males.obese",7)) -->
+<!--   x <- aldex.clr(t(rbind(pcos.no.obese,males.obese)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!--   conds <- c(rep("no.obesos",23),rep("obesos",23)) -->
+<!--   x <- aldex.clr(t(rbind(No.Obesos,obesos)), conds=conds, mc.samples=1000, denom="all", verbose=T) -->
+<!--   x.tt <- aldex.ttest(x, paired.test=FALSE, verbose=T) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- library(Hotelling) -->
+
+<!-- (res <- hotelling.test(t(pcos)~t(females),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+<!-- (res <- hotelling.test(t(pcos)~t(males),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+<!-- (res <- hotelling.test(t(males)~t(females),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- (res <- hotelling.test(t(obesos)~t(No.Obesos),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+<!-- (res <- hotelling.test(t(pcos.no.obese)~t(pcos.obese),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+<!-- (res <- hotelling.test(t(males.no.obese)~t(males.obese),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+<!-- (res <- hotelling.test(t(females.no.obese)~t(females.obese),shrikage=T,var.equal=F,perm=T,B=10000)) -->
+
+<!-- ``` -->
 

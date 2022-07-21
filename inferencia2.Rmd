@@ -539,7 +539,7 @@ list.trained2 <- vector("list",length = 128)
     rownames(t.input) <- colnames(genus.abs)
     datos <- list(metaboloma=(metaboloma),microbioma=(t.input))
     MOFAobject <-create_mofa_from_matrix(datos)
-    samples_metadata(MOFAobject)<- data.frame(sample=pacientes,obesidad=(obesidad),grupo=(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,obesidad=as.numeric(obesidad),grupo=as.numeric(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,CD14=IP$CD14_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],LBP=IP$LBP_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],GLP2=IP$GLP2_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Zonulin=IP$Zonulin_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Succinate=IP$Succin_basalmea[IP$Paciente %in% variables_in_bacteria$Paciente],SEX=IP$SEX[IP$Paciente %in% variables_in_bacteria$Paciente])
+    samples_metadata(MOFAobject)<- data.frame(sample=pacientes,obesidad=(obesidad),grupo=(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,obesidad=as.numeric(obesidad),grupo=as.numeric(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,CD14=IP$CD14_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],LBP=IP$LBP_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],GLP2=IP$GLP2_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Zonulin=IP$Zonulin_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Succinate=IP$Succin_basalmea[IP$Paciente %in% variables_in_bacteria$Paciente],SEX=IP$SEX[IP$Paciente %in% variables_in_bacteria$Paciente],interaccion=interaction(variables_in_bacteria$OBESE,variables_in_bacteria$GROUP))
     rownames(samples_metadata(MOFAobject))<-pacientes
        data_opts <- get_default_data_options(MOFAobject)
        data_opts$scale_views <-T
@@ -556,7 +556,7 @@ outfile <- file.path(getwd(),"model.hdf5")
 reticulate::use_python("/usr/bin/python3")
 
   MOFAobject.trained <- run_mofa(MOFAobject, outfile,use_basilisk = F)
-MOFAobject.trained@covariates<-data.frame(obesidad=as.numeric(obesidad),grupo=as.numeric(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,CD14=IP$CD14_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],LBP=IP$LBP_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],GLP2=IP$GLP2_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Zonulin=IP$Zonulin_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Succinate=IP$Succin_basalmea[IP$Paciente %in% variables_in_bacteria$Paciente],SEX=IP$SEX[IP$Paciente %in% variables_in_bacteria$Paciente])
+MOFAobject.trained@covariates<-data.frame(obesidad=as.numeric(obesidad),grupo=as.numeric(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,CD14=IP$CD14_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],LBP=IP$LBP_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],GLP2=IP$GLP2_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Zonulin=IP$Zonulin_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Succinate=IP$Succin_basalmea[IP$Paciente %in% variables_in_bacteria$Paciente],SEX=IP$SEX[IP$Paciente %in% variables_in_bacteria$Paciente],interaccion=interaction(variables_in_bacteria$OBESE,variables_in_bacteria$GROUP))
 
   list.trained2[[mc.i]]<- MOFAobject.trained
   }
@@ -586,21 +586,31 @@ plot_factor_cor(model)
 
 ```{r}
 correlate_factors_with_covariates(model,
-  covariates = c("obesidad","grupo","edad","BMI","WC","WHR","SHGB","hsCRP","TE2","E2","SEX","LBP","GLP2","Zonulin","Succinate"),
+  covariates = c("obesidad","grupo","edad","BMI","WC","WHR","SHGB","hsCRP","TE2","E2","SEX","LBP","GLP2","Zonulin","Succinate","interaccion"),
   plot="log_pval"
 )
 ```
 ```{r}
 plot_factor(model, 
   factor = 8,
-  color_by = "obesidad",
-  shape_by = "grupo",add_violin = F
+  color_by = "grupo",
+  shape_by = "obesidad",add_violin = F
 )
 ```
 
 ```{r}
 p1<-plot_factor(model, 
-  factors = c(1:3), 
+  factors = c(1,6,3), 
+  color_by = "grupo",
+  shape_by = "obesidad",
+  add_violin = TRUE,
+  dodge = TRUE
+)
+p1
+```
+```{r}
+p1<-plot_factor(model, 
+  factors = c(4:9), 
   color_by = "grupo",
   shape_by = "obesidad",
   add_violin = TRUE,
@@ -654,7 +664,7 @@ plot_weights(model,
 
 ```{r}
 plot_top_weights(model,
- view = "microbioma",
+ view = "metaboloma",
  factor = 1,
  nfeatures = 10,     # Top number of features to highlight
  scale = T           # Scale weights from -1 to 1
@@ -663,6 +673,15 @@ plot_top_weights(model,
 ```
 
 
+```{r}
+plot_top_weights(model,
+ view = "microbioma",
+ factor = 4:5,
+ nfeatures = 10,     # Top number of features to highlight
+ scale = T           # Scale weights from -1 to 1
+)
+
+```
 
 ## En general
 
@@ -686,9 +705,23 @@ weights.recast$views <- c(rep("metabooloma",37),rep("microbioma",94))
 Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
 rownames(Y) <- pacientes
 colnames(Y) <- rownames(weights.recast)
+plsda.int <- plsda(Y,grupo)
+p1<-graphPCA.methods2(plsda.int$variates$X,datos.common,varianzas=c(plsda.int$prop_expl_var$X[1],plsda.int$prop_expl_var$X[2]))+ggtitle("PLS-DA - obesidad")
+plsda.int <- plsda(Y,obesidad)
+
+p2 <-graphPCA.methods(plsda.int$variates$X,datos.common,varianzas=c(plsda.int$prop_expl_var$X[1],plsda.int$prop_expl_var$X[2]))+ggtitle("PLS-DA - grupo")
+
 plsda.int <- plsda(Y,interaccion)
-p5<-graphPCA.methods(plsda.int$variates$X,datos.common,varianzas=c(plsda.int$prop_expl_var$X[1],plsda.int$prop_expl_var$X[2]))+ggtitle("PLS-DA")
-p5
+
+p3 <-graphPCA.methods(plsda.int$variates$X,datos.common,varianzas=c(plsda.int$prop_expl_var$X[1],plsda.int$prop_expl_var$X[2]))+ggtitle("PLS-DA - interaccion")
+
+pcx <- prcomp((Y),scale=F,center=T)
+varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
+p4 <-graphPCA.methods2(pcx$x,datos.common,varianzas)+ggtitle("PCA")
+
+ggarrange(p2,p3,common.legend = T)
+ggarrange(p1,p,common.legend = T)
+
 ```
 
 
@@ -869,7 +902,72 @@ rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]
 (vars <- vars[order(vars$views),])
 ```
 
+```{r}
+library(Hotelling)
+(res.g1 <- hotelling.test(females,pcos,shrinkage = T,var.equal = F,perm = T,B=1000))
+(res.g2 <- hotelling.test(females,males,shrinkage = T,var.equal = F,perm = T,B=1000))
+(res.g3 <- hotelling.test(pcos,males,shrinkage = T,var.equal = F,perm = T,B=1000))
+```
 
+```{r}
+(res.ob <- hotelling.test(obesos,No.Obesos,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+```
+
+```{r}
+(int1 <- hotelling.test(females.no.obese,females.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int2 <- hotelling.test(males.no.obese,males.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int3 <- hotelling.test(pcos.no.obese,pcos.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int4 <- hotelling.test(females.no.obese,males.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int5 <- hotelling.test(females.no.obese,pcos.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int6 <- hotelling.test(females.no.obese,males.no.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int7 <- hotelling.test(females.no.obese,pcos.no.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int8 <- hotelling.test(males.no.obese,females.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int9 <- hotelling.test(males.no.obese,pcos.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int10 <- hotelling.test(pcos.no.obese,females.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int11 <- hotelling.test(females.obese,males.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int12 <- hotelling.test(females.obese,pcos.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int13 <- hotelling.test(males.obese,pcos.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int14 <- hotelling.test(males.no.obese,pcos.no.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+
+(int15 <- hotelling.test(pcos.no.obese,males.obese,shrinkage = T,var.equal = F,perm = T,B=1000))
+```
+
+```{r}
+pvals <-c(int1$pval,int2$pval,int3$pval,int4$pval,int5$pval,int6$pval,
+  int7$pval,int8$pval,int9$pval,int10$pval,int11$pval,int12$pval,
+  int13$pval,int14$pval,int15$pval)
+p.adjust(pvals,method = "BH")
+```
+
+```{r}
+(res1 <- hotelling.test(FEMALES,MALES,shrinkage = T,var.equal = F,perm = T,B = 1000))
+```
+```{r}
+(res1 <- hotelling.test(obesos,No.Obesos,shrinkage = T,var.equal = F,perm = T,B = 1000))
+
+```
+
+```{r}
+(res1 <- hotelling.test(females,pcos,shrinkage = T,var.equal = F,perm = T,B = 1000))
+(res2 <- hotelling.test(males,pcos,shrinkage = T,var.equal = F,perm = T,B = 1000))
+(res3 <- hotelling.test(females,males,shrinkage = T,var.equal = F,perm = T,B = 1000))
+
+p.adjust(c(res1$pval,res2$pval,res3$pval),method = "BH")
+```
 
 ## Graficos variables
 
@@ -925,20 +1023,51 @@ as.dendrogram(my_hclust_gene) %>%
 as.dendrogram(my_hclust_sample) %>%
   plot(horiz = TRUE)
 my_gene_col <- cutree(tree = as.dendrogram(my_hclust_gene), k = 2)
-my_gene_col <- data.frame(cluster = ifelse(test = my_gene_col == 1, yes = "cluster 1", no = "cluster 2"))
+my_gene_col <- data.frame(cluster = ifelse(test = my_gene_col == 1, yes = "cluster1", no = "cluster2"))
 my_gene_col$view <- c(rep("metaboloma",36),rep("microbioma",26))
 my_sample_col <- data.frame(obesidad=obesidad,grupo=grupo)
 my_colour = list(
-    obesidad = c(No.Obese = "#5977ff", Obese = "#f74747"),
-    view = c(metaboloma = "#82ed82", microbioma = "#9e82ed"),
-    cluster = c(cluster1 = "#e89829", cluster2 = "#cc4ee0"),
+    obesidad = c(No.Obese = "black", Obese = "red"),
+    view = c(metaboloma = "blue", microbioma = "steelblue"),
+    cluster = c(cluster1 = "red", cluster2 = "darkred"),
     grupo = c(Female="red",PCOS="blue",Male="black")
 )
 row.names(my_sample_col) <-pacientes
 
 library(pheatmap)
-pheatmap(t(data_subset), annotation_row = my_gene_col, annotation_col = my_sample_col,fontsize = 6)
+pheatmap(t(data_subset), annotation_row = my_gene_col, annotation_col = my_sample_col,annotation_colors = my_colour,fontsize = 7)
 ```
+```{r}
+library(ape)
+colors = c("red", "blue")
+my_hclust_sample <- hclust(dist(t(data_subset)), method = "complete")
+clus4 = cutree(my_hclust_sample, 2)
+plot(as.phylo(my_hclust_sample), type = "fan", tip.color = colors[clus4],
+     label.offset = 0.1, cex = 0.5)
+```
+
+```{r}
+library(ape)
+colors = c("red", "blue","black")
+dend <- Y  %>% dist %>% 
+   hclust %>% as.dendrogram %>%
+   set("branches_k_color", k=6) %>% set("branches_lwd", 1.2) %>%
+   set("labels_colors") %>% set("labels_cex", c(.9,1.2)) %>% 
+   set("leaves_pch", 19) %>% set("leaves_col", c("blue", "red","black","steelblue","green","darkgreen"))
+
+plot(dend)
+```
+
+
+
+```{r}
+csa <-plot_weights(model,factors = 1:9,nfeatures = 50,return_data = T,scale = T,view=1)
+unique(csa[csa$value>0.1,"feature"])
+
+csa <-plot_weights(model,factors = 1:9,nfeatures = 50,return_data = T,scale = T,view=2)
+unique(csa[csa$value>0.35,"feature"])
+```
+
 
 
 ```{r}
@@ -979,7 +1108,7 @@ microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente
 
 datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
 res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
-(rho_ob<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+(rho_ob<-cor.test(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
 ```
 ```{r}
 Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
@@ -992,7 +1121,7 @@ microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente
 
 datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
 res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
-(rho_ob<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+(rho_ob<-cor.test(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
 ```
 
 ```{r}
@@ -1006,7 +1135,7 @@ microbioma<- microbioma[rownames(microbioma) %in% variables_in_bacteria$Paciente
 
 datos <- list(metaboloma=(metaboloma),microbioma=(microbioma))
 res1.pls.met_micro <- mixOmics::pls(datos$metaboloma,datos$microbioma,ncomp=1)
-(rho_ob<-cor(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
+(rho_ob<-cor.test(res1.pls.met_micro$variates$X,res1.pls.met_micro$variates$Y))
 ```
 
 ```{r}

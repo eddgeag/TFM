@@ -529,7 +529,7 @@ metaboloma<-(voom(met37_norm,normalize.method = "quantile")$E)
 mc.all <- getMonteCarloInstances(G.clr)
 mc.intstances <-numMCInstances(G.clr)
 list.trained2 <- vector("list",length = 128)
-
+list.adonis <- vector("list",length = 128)
   for (mc.i in 1:mc.intstances){
 
     t.input <- sapply(mc.all, function(y) {
@@ -559,10 +559,34 @@ reticulate::use_python("/usr/bin/python3")
   MOFAobject.trained <- run_mofa(MOFAobject, outfile,use_basilisk = F)
 MOFAobject.trained@covariates<-data.frame(obesidad=as.numeric(obesidad),grupo=as.numeric(grupo),edad=Clin$EDAD,BMI=Clin$BMI,WC=Clin$WC,WHR=Clin$WHR,SHGB=Clin$SHBG,hsCRP=Clin$hsCRP,TE2=Clin$Total_ESTR,E2=Clin$Free_ESTRA,CD14=IP$CD14_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],LBP=IP$LBP_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],GLP2=IP$GLP2_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Zonulin=IP$Zonulin_basalmean[IP$Paciente %in% variables_in_bacteria$Paciente],Succinate=IP$Succin_basalmea[IP$Paciente %in% variables_in_bacteria$Paciente],SEX=IP$SEX[IP$Paciente %in% variables_in_bacteria$Paciente],interaccion=interaction(variables_in_bacteria$OBESE,variables_in_bacteria$GROUP))
 
+model <- MOFAobject.trained
+factors <- get_factors(model, as.data.frame = T,scale = F)
+
+weights <- rbind(get_weights(model,as.data.frame=T,scale=F,views="metaboloma"),
+                 get_weights(model,as.data.frame=T,scale=F,views="microbioma"))
+                 
+factores.recast <-as.data.frame(reshape2::recast(data=factors,sample~factor))
+rownames(factores.recast) <- factores.recast$sample
+factores.recast <- factores.recast[,-1]
+weights.recast <-as.data.frame(reshape2::recast(data=weights,feature~factor))
+rownames(weights.recast) <- weights.recast$feature
+weights.recast <- weights.recast[,-1]
+weights.recast$views <- c(rep("metabooloma",37),rep("microbioma",94))
+Y <-(as.matrix(factores.recast) %*% t(weights.recast[,-ncol(weights.recast)]))
+rownames(Y) <- pacientes
+colnames(Y) <- rownames(weights.recast)
+res <-adonis2(Y ~ obesidad*grupo,method="euclidean")
+list.adonis[[mc.i]] <- res
   list.trained2[[mc.i]]<- MOFAobject.trained
+  
+  
+  
+  
   }
 
 ```
+
+
 
 ```{r}
 model <- list.trained2[[which.max(unlist(lapply(list.trained2,function(x) get_elbo(x))))]]
@@ -593,7 +617,7 @@ correlate_factors_with_covariates(model,
 ```
 ```{r}
 plot_factor(model, 
-  factor = 8,
+  factor = 1,
   color_by = "grupo",
   shape_by = "obesidad",add_violin = F
 )
@@ -611,7 +635,7 @@ p1
 ```
 ```{r}
 p1<-plot_factor(model, 
-  factors = c(4:9), 
+  factors = c(1:3), 
   color_by = "grupo",
   shape_by = "obesidad",
   add_violin = TRUE,
@@ -721,7 +745,7 @@ varianzas <- 100*(pcx$sdev^2/sum(pcx$sdev^2))
 p4 <-graphPCA.methods2(pcx$x,datos.common,varianzas)+ggtitle("PCA")
 
 ggarrange(p2,p3,common.legend = T)
-ggarrange(p1,p,common.legend = T)
+ggarrange(p1,p4,common.legend = T)
 
 ```
 
@@ -734,6 +758,12 @@ datos <- as.data.frame(Y)
 grupo<-variables_in_bacteria$GROUP
 obesidad <- factor(gsub(" ",".",variables_in_bacteria$OBESE))
 interaccion<-factor(paste(obesidad,grupo,sep="_"))
+
+adonis2(Y ~ obesidad*grupo,method="euclidean")
+```
+
+
+```{r}
 datos$grupo <- grupo
 datos$obesidad <- obesidad
 datos$interaccion <- interaccion
@@ -899,8 +929,11 @@ rownames(df.interaccion) <- rownames(matriz.interaccion.adj)[w]
 
 
 ```{r}
-(vars <-data.frame(features=Reduce("union",list(intr,intr2,intr3,gru1,gru2,gru3,ob1,ob2)),views=c(rep("metaboloma",5),rep("microbioma",2),rep("metaboloma",2),rep("microbioma",6),rep("metaboloma",24),rep("microbioma",15),rep("metaboloma",5),rep("microbioma",3))))
-(vars <- vars[order(vars$views),])
+vars <-data.frame(features=Reduce("union",list(intr,intr2,intr3,gru1,gru2,gru3,ob1,ob2)))
+
+vars$views <- ifelse(vars$features %in% rownames(metaboloma),"metaboloma","microbioma")
+vars <- vars[order(vars$views),]
+
 ```
 
 ```{r}

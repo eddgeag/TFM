@@ -1,0 +1,16 @@
+"","cortest","manteltest","wilcox","cor"
+"No.Obese_Female_vs_No.Obese_Male",0.0709,0.0165,0.8455,0.587803500846979
+"No.Obese_Female_vs_No.Obese_PCOS",1e-04,0.0015,1,0.810276679841897
+"No.Obese_Female_vs_Obese_Female",0.0142,0.0255,1,0.666854884246189
+"No.Obese_Female_vs_Obese_Male",0.1569,1,1,0.540372670807453
+"No.Obese_Female_vs_Obese_PCOS",0.0305,0.6074,0.3504,0.63184641445511
+"No.Obese_Male_vs_No.Obese_PCOS",0.0043,0.0015,1,0.713156408808583
+"No.Obese_Male_vs_Obese_Female",3e-04,0.1005,1,0.788819875776397
+"No.Obese_Male_vs_Obese_Male",0,0.9524,0.3113,0.864483342744212
+"No.Obese_Male_vs_Obese_PCOS",0.0017,0.0225,0.012,0.743647656691135
+"No.Obese_PCOS_vs_Obese_Female",0.0124,0.0315,1,0.672501411631846
+"No.Obese_PCOS_vs_Obese_Male",0.0157,0.2325,1,0.662337662337662
+"No.Obese_PCOS_vs_Obese_PCOS",0.0542,0.0225,0.4485,0.602484472049689
+"Obese_Female_vs_Obese_Male",4e-04,0.8594,1,0.778656126482213
+"Obese_Female_vs_Obese_PCOS",0,0.9554,0.1083,0.869000564652739
+"Obese_Male_vs_Obese_PCOS",0,0.0015,1,0.856578204404291

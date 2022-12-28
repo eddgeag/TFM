@@ -1,0 +1,16 @@
+"","p","nombres","asociacion","no_asociacion"
+"females.no.obese males.no.obese",1,"females.no.obese males.no.obese",NA,">0.05"
+"females.no.obese pcos.no.obese",0.03816,"females.no.obese pcos.no.obese","<0.05",NA
+"females.no.obese females.obese",0.12837,"females.no.obese females.obese",NA,">0.05"
+"females.no.obese pcos.obese",0.01656,"females.no.obese pcos.obese","<0.05",NA
+"females.no.obese males.obese",0.0636,"females.no.obese males.obese",NA,">0.05"
+"males.no.obese pcos.no.obese",0.12432,"males.no.obese pcos.no.obese",NA,">0.05"
+"males.no.obese females.obese",0.07395,"males.no.obese females.obese",NA,">0.05"
+"males.no.obese pcos.obese",1,"males.no.obese pcos.obese",NA,">0.05"
+"males.no.obese males.obese",1,"males.no.obese males.obese",NA,">0.05"
+"pcos.no.obese females.obese",1,"pcos.no.obese females.obese",NA,">0.05"
+"pcos.no.obese pcos.obese",0.01668,"pcos.no.obese pcos.obese","<0.05",NA
+"pcos.no.obese males.obese",1,"pcos.no.obese males.obese",NA,">0.05"
+"females.obese pcos.obese",0.32319,"females.obese pcos.obese",NA,">0.05"
+"females.obese males.obese",1,"females.obese males.obese",NA,">0.05"
+"pcos.obese males.obese",0.01515,"pcos.obese males.obese","<0.05",NA

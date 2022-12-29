@@ -1,5 +1,7 @@
 
 
+
+
 ######
 # SCRIPT PARA PREPARAR VARIABLES #
 
@@ -34,7 +36,8 @@ list.of.packages <-
     "OmicsPLS",
     "psych",
     "lmPerm",
-    "car"
+    "car",
+    "zCompositions"
   )
 
 ### Preparamos librerias BIoconductor
@@ -104,181 +107,333 @@ common.bacteria <- function(datos_i, datos.comunes) {
   
   return(common_variables)
 }
-pretratado_clinico <- function(general_data,variables_in_bacteria,comunes){
-  
-  if(comunes){
-    sujetos <- variables_in_bacteria$Paciente
-    Clin.tmp <-
-      variables_in_bacteria[, -c(1, 2, 3, 4, 5)] # get rid off orden, paciente, sex, group and obese
-    auc_clin <- colnames(Clin.tmp)[grep("AUC", colnames(Clin.tmp))]
-    mean_basal_clin <-
-      colnames(Clin.tmp)[grep("_B$", colnames(Clin.tmp))]
-    sog <- colnames(Clin.tmp)[grep("^SO[GLP]", colnames(Clin.tmp))]
-    variables_clin <- colnames(Clin.tmp)
-    testosterona <- colnames(Clin.tmp)[grep("TEST", colnames(Clin.tmp))]
-    interr <-
-      colnames(Clin.tmp)[grep("interaccion", colnames(Clin.tmp))]
-    ratio <- colnames(Clin.tmp)[grep("Ratio", colnames(Clin.tmp))]
-    w <-
-      c(
-        which(variables_clin %in% auc_clin),
-        which(variables_clin %in% mean_basal_clin),
-        which(variables_clin %in% sog),
-        which(variables_clin %in% testosterona),
-        which(variables_clin %in% interr),
-        which(variables_clin %in% ratio)
-      )
-    Clin <- Clin.tmp[, -w]
-    rownames(Clin) <- sujetos
-    colnames(Clin)
-    
-  }else{
-    sujetos <- general_data$Paciente
-    Clin.tmp <-
-      general_data[, -c(1, 2, 3, 4, 5)] # get rid off orden, paciente, sex, group and obese
-    auc_clin <- colnames(Clin.tmp)[grep("AUC", colnames(Clin.tmp))]
-    mean_basal_clin <-
-      colnames(Clin.tmp)[grep("_B$", colnames(Clin.tmp))]
-    sog <- colnames(Clin.tmp)[grep("^SO[GLP]", colnames(Clin.tmp))]
-    variables_clin <- colnames(Clin.tmp)
-    testosterona <- colnames(Clin.tmp)[grep("TEST", colnames(Clin.tmp))]
-    interr <-
-      colnames(Clin.tmp)[grep("interaccion", colnames(Clin.tmp))]
-    ratio <- colnames(Clin.tmp)[grep("Ratio", colnames(Clin.tmp))]
-    w <-
-      c(
-        which(variables_clin %in% auc_clin),
-        which(variables_clin %in% mean_basal_clin),
-        which(variables_clin %in% sog),
-        which(variables_clin %in% testosterona),
-        which(variables_clin %in% interr),
-        which(variables_clin %in% ratio)
-      )
-    Clin <- Clin.tmp[, -w]
-    rownames(Clin) <- sujetos
-    colnames(Clin)
-    
-  }
-  return(Clin)
-  
-}
-pretratado_IP <- function(IP,variables_in_bacteria,common,general_data){
-  
-  if(common){
-    sujetos <- variables_in_bacteria$Paciente
-    IP.tmp <- IP[IP$Paciente %in% variables_in_bacteria$Paciente, ]
-    redundant_variables <-
-      c("Orden", "Paciente", "SEX", "GROUP", "OBESE", "BMI")
-    variables_ip <- colnames(IP.tmp)
-    auc_ip <- variables_ip[grep("AUC", variables_ip)]
-    mean_ip <- variables_ip[grep("_0$", variables_ip)]
-    w <-
-      c(
-        which(variables_ip %in% redundant_variables),
-        which(variables_ip %in% auc_ip),
-        which(variables_ip %in% mean_ip)
-      )
-    IP.basal <- IP.tmp[, -w]
-    rownames(IP.basal) <- sujetos
-    
-  }else{
-    sujetos <- general_data$Paciente
-    IP.tmp <- IP
-    redundant_variables <-
-      c("Orden", "Paciente", "SEX", "GROUP", "OBESE", "BMI")
-    variables_ip <- colnames(IP.tmp)
-    auc_ip <- variables_ip[grep("AUC", variables_ip)]
-    mean_ip <- variables_ip[grep("_0$", variables_ip)]
-    w <-
-      c(
-        which(variables_ip %in% redundant_variables),
-        which(variables_ip %in% auc_ip),
-        which(variables_ip %in% mean_ip)
-      )
-    IP.basal <- IP.tmp[, -w]
-    rownames(IP.basal) <- sujetos
+pretratado_clinico <-
+  function(general_data,
+           variables_in_bacteria,
+           comunes) {
+    if (comunes) {
+      sujetos <- variables_in_bacteria$Paciente
+      Clin.tmp <-
+        variables_in_bacteria[, -c(1, 2, 3, 4, 5)] # get rid off orden, paciente, sex, group and obese
+      auc_clin <-
+        colnames(Clin.tmp)[grep("AUC", colnames(Clin.tmp))]
+      mean_basal_clin <-
+        colnames(Clin.tmp)[grep("_B$", colnames(Clin.tmp))]
+      sog <-
+        colnames(Clin.tmp)[grep("^SO[GLP]", colnames(Clin.tmp))]
+      variables_clin <- colnames(Clin.tmp)
+      testosterona <-
+        colnames(Clin.tmp)[grep("TEST", colnames(Clin.tmp))]
+      interr <-
+        colnames(Clin.tmp)[grep("interaccion", colnames(Clin.tmp))]
+      ratio <- colnames(Clin.tmp)[grep("Ratio", colnames(Clin.tmp))]
+      w <-
+        c(
+          which(variables_clin %in% auc_clin),
+          which(variables_clin %in% mean_basal_clin),
+          which(variables_clin %in% sog),
+          which(variables_clin %in% testosterona),
+          which(variables_clin %in% interr),
+          which(variables_clin %in% ratio)
+        )
+      Clin <- Clin.tmp[, -w]
+      rownames(Clin) <- sujetos
+      colnames(Clin)
+      
+    } else{
+      sujetos <- general_data$Paciente
+      Clin.tmp <-
+        general_data[, -c(1, 2, 3, 4, 5)] # get rid off orden, paciente, sex, group and obese
+      auc_clin <-
+        colnames(Clin.tmp)[grep("AUC", colnames(Clin.tmp))]
+      mean_basal_clin <-
+        colnames(Clin.tmp)[grep("_B$", colnames(Clin.tmp))]
+      sog <-
+        colnames(Clin.tmp)[grep("^SO[GLP]", colnames(Clin.tmp))]
+      variables_clin <- colnames(Clin.tmp)
+      testosterona <-
+        colnames(Clin.tmp)[grep("TEST", colnames(Clin.tmp))]
+      interr <-
+        colnames(Clin.tmp)[grep("interaccion", colnames(Clin.tmp))]
+      ratio <- colnames(Clin.tmp)[grep("Ratio", colnames(Clin.tmp))]
+      w <-
+        c(
+          which(variables_clin %in% auc_clin),
+          which(variables_clin %in% mean_basal_clin),
+          which(variables_clin %in% sog),
+          which(variables_clin %in% testosterona),
+          which(variables_clin %in% interr),
+          which(variables_clin %in% ratio)
+        )
+      Clin <- Clin.tmp[, -w]
+      rownames(Clin) <- sujetos
+      colnames(Clin)
+      
+    }
+    return(Clin)
     
   }
-  return(IP.basal)
-}
+pretratado_IP <-
+  function(IP,
+           variables_in_bacteria,
+           common,
+           general_data) {
+    if (common) {
+      sujetos <- variables_in_bacteria$Paciente
+      IP.tmp <- IP[IP$Paciente %in% variables_in_bacteria$Paciente, ]
+      redundant_variables <-
+        c("Orden", "Paciente", "SEX", "GROUP", "OBESE", "BMI")
+      variables_ip <- colnames(IP.tmp)
+      auc_ip <- variables_ip[grep("AUC", variables_ip)]
+      mean_ip <- variables_ip[grep("_0$", variables_ip)]
+      w <-
+        c(
+          which(variables_ip %in% redundant_variables),
+          which(variables_ip %in% auc_ip),
+          which(variables_ip %in% mean_ip)
+        )
+      IP.basal <- IP.tmp[, -w]
+      rownames(IP.basal) <- sujetos
+      
+    } else{
+      sujetos <- general_data$Paciente
+      IP.tmp <- IP
+      redundant_variables <-
+        c("Orden", "Paciente", "SEX", "GROUP", "OBESE", "BMI")
+      variables_ip <- colnames(IP.tmp)
+      auc_ip <- variables_ip[grep("AUC", variables_ip)]
+      mean_ip <- variables_ip[grep("_0$", variables_ip)]
+      w <-
+        c(
+          which(variables_ip %in% redundant_variables),
+          which(variables_ip %in% auc_ip),
+          which(variables_ip %in% mean_ip)
+        )
+      IP.basal <- IP.tmp[, -w]
+      rownames(IP.basal) <- sujetos
+      
+    }
+    return(IP.basal)
+  }
 
-pretratado_metaboloma<- function(metabolome,variables_in_bacteria,general_data,common,vom){
-  
-  if(common){
-    sujetos <- variables_in_bacteria$Paciente
-    grupo <- variables_in_bacteria$GROUP
-    obesidad <- variables_in_bacteria$OBESE
-    metabolome.basal.tmp <- metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
-    redundant_data_meta <- c("Order", "Sample", "GROUP", "OBESE")
-    variables_meta <- colnames(metabolome.basal.tmp)
-    mean_meta <- variables_meta[grep("_[GLP]0$", variables_meta)]
-    auc_meta <- variables_meta[grep("AU[CG]", variables_meta)]
-    w <-
-      c(
-        which(variables_meta %in% redundant_data_meta),
-        which(variables_meta %in% mean_meta),
-        which(variables_meta %in% auc_meta)
-      )
-    metabolome.basal_mean <- metabolome.basal.tmp[, -w]
-    rownames(metabolome.basal_mean) <- sujetos
-    
-    
-    grupo <- general_data$GROUP
-    obesidad <- general_data$OBESE
-    metaboloma <- metabolome.basal_mean
-    
-  }else{
-    metabolome.basal.tmp <- metabolome
-    redundant_data_meta <- c("Order", "Sample", "GROUP", "OBESE")
-    variables_meta <- colnames(metabolome.basal.tmp)
-    mean_meta <- variables_meta[grep("_[GLP]0$", variables_meta)]
-    auc_meta <- variables_meta[grep("AU[CG]", variables_meta)]
-    w <-
-      c(
-        which(variables_meta %in% redundant_data_meta),
-        which(variables_meta %in% mean_meta),
-        which(variables_meta %in% auc_meta)
-      )
-    metabolome.basal_mean <- metabolome.basal.tmp[, -w]
-    rownames(metabolome.basal_mean) <- general_data$Paciente
-    
-    
-    grupo <- general_data$GROUP
-    obesidad <- general_data$OBESE
-    metaboloma <- metabolome.basal_mean
-    
-  }
-  
-  if(vom && common==F){
-    grupo <- general_data$GROUP
-    obesidad <- general_data$OBESE
-    met37<-t(metaboloma)
-    met37_norm <- met37/rowSums(met37)
-    met37_log <- t(apply(met37_norm,1,log))
-    design <- model.matrix(~obesidad*grupo)
-    metaboloma.procesado<-(voom(met37_norm,normalize.method = "quantile",design = design)$E)
-    metaboloma <- metaboloma.procesado
-    
-  }else if(vom && common==T){
-    
-    grupo <- variables_in_bacteria$GROUP
-    obesidad <- variables_in_bacteria$OBESE
-    met37<-t(metaboloma)
-    met37_norm <- met37/rowSums(met37)
-    met37_log <- t(apply(met37_norm,1,log))
-    design <- model.matrix(~obesidad*grupo)
-    metaboloma.procesado<-(voom(met37_norm,normalize.method = "quantile",design = design)$E)
-    metaboloma <- metaboloma.procesado
-    
-    
-  }
-  
-  
-  
-  return(metaboloma)
-}
 
-post_procesado_aldex <- function(genera.abs,phylum.abs){
+pretratado_metaboloma <-
+  function(metabolome,
+           variables_in_bacteria,
+           general_data,
+           common) {
+
+    ## si queremos las observaciones comunes y procesamos
+    if (common) {
+      sujetos <- variables_in_bacteria$Paciente
+      grupo <- variables_in_bacteria$GROUP
+      obesidad <- variables_in_bacteria$OBESE
+      metabolome.basal.tmp <-
+        metabolome[metabolome$Order %in% variables_in_bacteria$Orden,]
+      redundant_data_meta <- c("Order", "Sample", "GROUP", "OBESE")
+      variables_meta <- colnames(metabolome.basal.tmp)
+      mean_meta <- variables_meta[grep("_[GLP]0$", variables_meta)]
+      auc_meta <- variables_meta[grep("AU[CG]", variables_meta)]
+      w <-
+        c(
+          which(variables_meta %in% redundant_data_meta),
+          which(variables_meta %in% mean_meta),
+          which(variables_meta %in% auc_meta)
+        )
+      metabolome.basal_mean <- metabolome.basal.tmp[, -w]
+      rownames(metabolome.basal_mean) <- sujetos
+    
+      metaboloma <- metabolome.basal_mean
+      
+    } else{
+      sujetos <- general_data$Paciente
+      grupo <- general_data$GROUP
+      obesidad <- general_data$OBESE
+      metabolome.basal.tmp <- metabolome
+      redundant_data_meta <- c("Order", "Sample", "GROUP", "OBESE")
+      variables_meta <- colnames(metabolome.basal.tmp)
+      mean_meta <- variables_meta[grep("_[GLP]0$", variables_meta)]
+      auc_meta <- variables_meta[grep("AU[CG]", variables_meta)]
+      w <-
+        c(
+          which(variables_meta %in% redundant_data_meta),
+          which(variables_meta %in% mean_meta),
+          which(variables_meta %in% auc_meta)
+        )
+      metabolome.basal_mean <- metabolome.basal.tmp[, -w]
+      rownames(metabolome.basal_mean) <- sujetos
+      
+      metaboloma <- metabolome.basal_mean
+      
+      
+    }
+    ### hacemos doble normalizacion con voom y el metodo escogido
+    if (common) {
+      met37 <- t(metaboloma)
+      met37_norm <- (met37 / rowSums(met37))
+      met37_log <- (apply(met37_norm, 1, log10))
+      metaboloma.single <- t(met37_log)
+      design <- model.matrix(~ obesidad * grupo)
+      metaboloma.procesado <-
+        (voom(
+          (met37_norm),
+          normalize.method = "none",
+          design = design
+        )$E)
+      metaboloma.doble.none <- metaboloma.procesado
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "scale",
+          design = design
+        )$E)
+      metaboloma.doble.scale <- metaboloma.procesado
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "quantile",
+          design = design
+        )$E)
+      metaboloma.doble.quantile <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "cyclicloess",
+          design = design
+        )$E)
+      metaboloma.doble.cyclicloess <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "none",
+          design = design
+        )$E)
+      metaboloma.single.none <- metaboloma.procesado
+      
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "scale",
+          design = design
+        )$E)
+      metaboloma.single.scale <- metaboloma.procesado
+      
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "quantile",
+          design = design
+        )$E)
+      metaboloma.single.quantile <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "cyclicloess",
+          design = design
+        )$E)
+      metaboloma.single.cyclicloess <- metaboloma.procesado
+      
+      
+      
+      
+      
+    } else{
+      met37 <- t(metaboloma)
+      met37_norm <- met37 / rowSums(met37)
+      met37_log <- t(apply(met37_norm, 1, log10))
+      metaboloma.single <- t(met37_log)
+      design <- model.matrix(~ obesidad * grupo)
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "none",
+          design = design
+        )$E)
+      metaboloma.doble.none <- metaboloma.procesado
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "scale",
+          design = design
+        )$E)
+      metaboloma.doble.scale <- metaboloma.procesado
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "quantile",
+          design = design
+        )$E)
+      metaboloma.doble.quantile <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          met37_norm,
+          normalize.method = "cyclicloess",
+          design = design
+        )$E)
+      metaboloma.doble.cyclicloess <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "none",
+          design = design
+        )$E)
+      metaboloma.single.none <- metaboloma.procesado
+      
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "scale",
+          design = design
+        )$E)
+      metaboloma.single.scale <- metaboloma.procesado
+      
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "quantile",
+          design = design
+        )$E)
+      metaboloma.single.quantile <- metaboloma.procesado
+      
+      metaboloma.procesado <-
+        (voom(
+          t(metaboloma),
+          normalize.method = "cyclicloess",
+          design = design
+        )$E)
+      metaboloma.single.cyclicloess <- metaboloma.procesado
+      
+      
+    }
+    
+    
+    datos.metaboloma <- list(
+      metaboloma.crudo = metaboloma,
+      metaboloma.single = metaboloma.single,
+      metaboloma.doble.none = metaboloma.doble.none,
+      metaboloma.doble.scale = metaboloma.doble.scale,
+      metaboloma.doble.quantile = metaboloma.doble.quantile,
+      metaboloma.doble.cyclicloess = metaboloma.doble.cyclicloess,
+      metaboloma.single.none = metaboloma.single.none,
+      metaboloma.single.scale = metaboloma.single.scale,
+      metaboloma.single.quantile = metaboloma.single.quantile,
+      metaboloma.single.cyclicloess = metaboloma.single.cyclicloess
+    )
+    
+    return(datos.metaboloma)
+  }
+
+post_procesado_aldex.t <- function(genera.abs, phylum.abs) {
+  # hacemos el procesado con aldex y todas las observaciones
   mc.samples <- 128
   genus.abs <- genera.abs[, -c(
     grep("^ud-", colnames(genera.abs)),
@@ -287,7 +442,6 @@ post_procesado_aldex <- function(genera.abs,phylum.abs){
     grep("OBESE", colnames(genera.abs))
   )]
   
-  genus.aldex <- aldex.clr(t(genus.abs),mc.samples = mc.samples)
   
   phylum.abs <- phylum.abs[, -c(
     grep("^ud.", colnames(phylum.abs)),
@@ -298,13 +452,178 @@ post_procesado_aldex <- function(genera.abs,phylum.abs){
   
   phylum.abs <- phylum.abs[, colSums(phylum.abs != 0) > 0]
   
-  phylum.aldex <- aldex.clr(t(phylum.abs),mc.samples=mc.samples)
-  genus.aldex <- aldex.clr(t(genus.abs),mc.samples=mc.samples)
-  return(list(genero=genus.aldex,filo=phylum.aldex,genus.abs=genus.abs,phylum.abs=phylum.abs))
+  phylum.aldex <- aldex.clr(t(phylum.abs), mc.samples = mc.samples)
+  genus.aldex <- aldex.clr(t(genus.abs), mc.samples = mc.samples)
+  return(
+    list(
+      genero = genus.aldex,
+      filo = phylum.aldex,
+      genus.abs = genus.abs,
+      phylum.abs = phylum.abs
+    )
+  )
   
 }
 
-read_integromics <- function(ruta){
+post_procesado_aldex <- function(genera.abs, phylum.abs) {
+  # hacemos el procesado con las observaciones traspuestas y todas
+  mc.samples <- 128
+  genus.abs <- genera.abs[, -c(
+    grep("^ud-", colnames(genera.abs)),
+    grep("GROUP", colnames(genera.abs)),
+    grep("SEX", colnames(genera.abs)),
+    grep("OBESE", colnames(genera.abs))
+  )]
+  
+  
+  phylum.abs <- phylum.abs[, -c(
+    grep("^ud.", colnames(phylum.abs)),
+    grep("GROUP", colnames(phylum.abs)),
+    grep("SEX", colnames(phylum.abs)),
+    grep("OBESE", colnames(phylum.abs))
+  )]
+  
+  phylum.abs <- phylum.abs[, colSums(phylum.abs != 0) > 0]
+  
+  phylum.aldex <- aldex.clr((phylum.abs), mc.samples = mc.samples)
+  genus.aldex <- aldex.clr((genus.abs), mc.samples = mc.samples)
+  return(
+    list(
+      genero = genus.aldex,
+      filo = phylum.aldex,
+      genus.abs = genus.abs,
+      phylum.abs = phylum.abs
+    )
+  )
+  
+}
+
+
+post_procesado_aldex.t.filtrado <-
+  function(genera.abs, phylum.abs) {
+    # aldex filtrado normal
+    mc.samples <- 128
+    genus.abs <- genera.abs[, -c(
+      grep("^ud-", colnames(genera.abs)),
+      grep("GROUP", colnames(genera.abs)),
+      grep("SEX", colnames(genera.abs)),
+      grep("OBESE", colnames(genera.abs))
+    )]
+    
+    
+    phylum.abs <- phylum.abs[, -c(
+      grep("^ud.", colnames(phylum.abs)),
+      grep("GROUP", colnames(phylum.abs)),
+      grep("SEX", colnames(phylum.abs)),
+      grep("OBESE", colnames(phylum.abs))
+    )]
+    
+    phylum.abs <- phylum.abs[, colSums(phylum.abs != 0) > 0]
+    
+    phylum.aldex <- aldex.clr(t(phylum.abs), mc.samples = mc.samples)
+    genus.aldex <- aldex.clr(t(genus.abs), mc.samples = mc.samples)
+    return(
+      list(
+        genero = genus.aldex,
+        filo = phylum.aldex,
+        genus.abs = genus.abs,
+        phylum.abs = phylum.abs
+      )
+    )
+    
+  }
+
+post_procesado_aldex.filtrado <- function(genera.abs, phylum.abs) {
+  # proceado aldex y traspuesto filtrado
+  mc.samples <- 128
+  genus.abs <- genera.abs[, -c(
+    grep("^ud-", colnames(genera.abs)),
+    grep("GROUP", colnames(genera.abs)),
+    grep("SEX", colnames(genera.abs)),
+    grep("OBESE", colnames(genera.abs))
+  )]
+  
+  genus.abs <- low.count.removal.counts(genus.abs, 120)$data.filter
+  
+  
+  phylum.abs <- phylum.abs[, -c(
+    grep("^ud.", colnames(phylum.abs)),
+    grep("GROUP", colnames(phylum.abs)),
+    grep("SEX", colnames(phylum.abs)),
+    grep("OBESE", colnames(phylum.abs))
+  )]
+  
+  phylum.abs <- phylum.abs[, colSums(phylum.abs != 0) > 0]
+  phylum.abs <- low.count.removal.counts(phylum.abs, 5)$data.filter
+  
+  phylum.aldex <- aldex.clr((phylum.abs), mc.samples = mc.samples)
+  genus.aldex <- aldex.clr((genus.abs), mc.samples = mc.samples)
+  return(
+    list(
+      genero = genus.aldex,
+      filo = phylum.aldex,
+      genus.abs = genus.abs,
+      phylum.abs = phylum.abs
+    )
+  )
+  
+}
+
+
+post_procesado_bayesian <- function(genera.abs, phylum.abs) {
+  # procesado bayesiano filtrado porque tiene que ser asi
+  # clr e ilr
+  genus.abs <- genera.abs[, -c(
+    grep("^ud-", colnames(genera.abs)),
+    grep("GROUP", colnames(genera.abs)),
+    grep("SEX", colnames(genera.abs)),
+    grep("OBESE", colnames(genera.abs))
+  )]
+  
+  
+  phylum.abs <- phylum.abs[, -c(
+    grep("^ud.", colnames(phylum.abs)),
+    grep("GROUP", colnames(phylum.abs)),
+    grep("SEX", colnames(phylum.abs)),
+    grep("OBESE", colnames(phylum.abs))
+  )]
+  
+  phylum.abs <- phylum.abs[, colSums(phylum.abs != 0) > 0]
+  phylum.abs <- low.count.removal.counts(phylum.abs, 5)$data.filter
+  phylum.bayes <- cmultRepl((phylum.abs), output = "p-counts")
+  phylum.bayes.clr <-
+    matrix((mixOmics::logratio.transfo(phylum.bayes, "CLR")),
+           nrow = nrow(phylum.abs),
+           ncol = ncol(phylum.abs)
+    )
+  rownames(phylum.bayes.clr) <- rownames(phylum.abs)
+  colnames(phylum.bayes.clr) <- colnames(phylum.abs)
+
+  
+  genus.abs <- low.count.removal.counts(genus.abs, 120)$data.filter
+  
+  genus.bayes <- cmultRepl((genus.abs), output = "p-counts")
+  genus.bayes.clr <-
+    matrix((mixOmics::logratio.transfo(genus.bayes, "CLR")),
+           nrow = nrow(genus.abs),
+           ncol = ncol(genus.abs)
+    )
+  rownames(genus.bayes.clr) <- rownames(genus.abs)
+  colnames(genus.bayes.clr) <- colnames(genus.abs)
+  
+
+  return(
+    list(
+      genero.clr = genus.bayes.clr,
+      filo.clr = phylum.bayes.clr
+    )
+  )
+}
+
+
+
+
+read_integromics <- function(ruta) {
   proces_bacteria <- function(datos, tipo) {
     Order <- bacteria_phylum.abs$Order
     variables_in_bacteria <-
@@ -352,15 +671,17 @@ read_integromics <- function(ruta){
   
   
   general_data <-
-    read.xlsx(file.path(ruta,"Integromics_1.xlsx"), sheetIndex = 1)
+    read.xlsx(file.path(ruta, "Integromics_1.xlsx"), sheetIndex = 1)
   general_data$SEX <-
     factor(general_data$SEX,
            levels = c(0, 2),
            labels = c("Female", "Male"))
   general_data$OBESE <-
-    factor(general_data$OBESE,
-           levels = c(0, 1),
-           labels = c("No Obese", "Obese"))
+    factor(
+      general_data$OBESE,
+      levels = c(0, 1),
+      labels = c("No Obese", "Obese")
+    )
   general_data$GROUP <-
     factor(
       general_data$GROUP,
@@ -368,7 +689,7 @@ read_integromics <- function(ruta){
       labels = c("Female",  "PCOS", "Male")
     )
   IP_file <-
-    file.path(file.path(ruta,"Integromics_IPmarkers.xlsx")) ## file path of the data
+    file.path(file.path(ruta, "Integromics_IPmarkers.xlsx")) ## file path of the data
   IP.tmp <- read.xlsx(IP_file, sheetIndex = 1)
   IP <- IP.tmp[, -7] # remove the missin values column
   IP$SEX <- factor(IP$SEX,
@@ -384,7 +705,7 @@ read_integromics <- function(ruta){
            labels = c("Female", "PCOS", "Male"))
   
   metabolome_file <-
-    file.path(file.path(ruta,"Integromics_Metabolome.xlsx")) ## file path of the data
+    file.path(file.path(ruta, "Integromics_Metabolome.xlsx")) ## file path of the data
   metabolome.tmp <-
     read.xlsx(metabolome_file, sheetIndex = 1) # read the data
   metabolites_name <-
@@ -397,17 +718,19 @@ read_integromics <- function(ruta){
   
   bacteria_phylum.abs <-
     as.data.frame(read.xlsx(
-      file.path(ruta,"integromics_microbiota.xlsx"),
+      file.path(ruta, "integromics_microbiota.xlsx"),
       sheetIndex = 1
     ))
   
   bacteria_genera.abs <-
     as.data.frame(t(read.xlsx(
-      file.path(ruta,"integromics_microbiota.xlsx"),
+      file.path(ruta, "integromics_microbiota.xlsx"),
       sheetIndex = 3
     )))
-  phylum.list <- proces_bacteria(bacteria_phylum.abs, tipo = "phylum")
-  genera.list <- proces_bacteria(bacteria_genera.abs, tipo = "genera")
+  phylum.list <-
+    proces_bacteria(bacteria_phylum.abs, tipo = "phylum")
+  genera.list <-
+    proces_bacteria(bacteria_genera.abs, tipo = "genera")
   
   phylum.abs <- phylum.list$abs
   phylum.rel <- phylum.list$rel
@@ -419,37 +742,94 @@ read_integromics <- function(ruta){
     general_data[general_data$Orden %in% bacteria_phylum.abs$Order,]
   
   
-  datos.clinicos.comunes <- pretratado_clinico(general_data,variables_in_bacteria,comunes=T)
-  datos.clinicos.totales <- pretratado_clinico(general_data,variables_in_bacteria,comunes=F)
-  datos.IP.comunes <- pretratado_IP(IP,variables_in_bacteria,common = T,general_data)
-  datos.IP.totales <- pretratado_IP(IP,variables_in_bacteria ,common = F,general_data)
-  datos.microbiota <- post_procesado_aldex(genera.abs,phylum.abs)
-  datos.genero <- datos.microbiota$genero
-  datos.filo <- datos.microbiota$filo
-  datos.genero.abs <- datos.microbiota$genus.abs
-  datos.filo.abs <- datos.microbiota$phylum.abs
-  datos.metaboloma.totales <- pretratado_metaboloma(metabolome,variables_in_bacteria,general_data ,common = F,vom = F)
-  datos.metaboloma.totales.voom <- pretratado_metaboloma(metabolome,variables_in_bacteria,general_data ,common = F,vom = T)
-  datos.metaboloma.common.voom <- pretratado_metaboloma(metabolome,variables_in_bacteria,general_data ,common = T,vom = T)
-  datos.metaboloma.common<- pretratado_metaboloma(metabolome,variables_in_bacteria,general_data ,common = T,vom = F)
+  datos.clinicos.comunes <-
+    pretratado_clinico(general_data, variables_in_bacteria, comunes = T)
+  datos.clinicos.totales <-
+    pretratado_clinico(general_data, variables_in_bacteria, comunes = F)
+  datos.IP.comunes <-
+    pretratado_IP(IP, variables_in_bacteria, common = T, general_data)
+  datos.IP.totales <-
+    pretratado_IP(IP, variables_in_bacteria , common = F, general_data)
+  ## microbioma
   
-  retorno <- list(datos.clinicos.comunes=datos.clinicos.comunes,
-                  datos.IP.comunes=datos.IP.comunes,
-                  datos.genero = datos.genero,
-                  datos.genero.abs=datos.genero.abs,
-                  datos.filo = datos.filo,
-                  datos.filo.abs=datos.filo.abs,
-                  datos.metaboloma.common=datos.metaboloma.common,
-                  datos.metaboloma.common.voom=data.frame(t(datos.metaboloma.common.voom)),
-                  datos.clinicos.totales=datos.clinicos.totales,
-                  datos.IP.totales=datos.IP.totales,
-                  datos.metaboloma.totales=datos.metaboloma.totales,
-                  datos.metaboloma.totales.voom=data.frame(t(datos.metaboloma.totales.voom)),
-                  variables_in_bacteria = variables_in_bacteria,
-                  grupo.total = general_data$GROUP,
-                  obesidad.total = general_data$OBESE,
-                  grupo.common = variables_in_bacteria$GROUP,
-                  obesidad.common = variables_in_bacteria$OBESE)
+  datos.microbiota.t <- post_procesado_aldex(genera.abs, phylum.abs)
+  datos.microbiota <- post_procesado_aldex.t(genera.abs, phylum.abs)
+  datos.microbiota.t.filt <-
+    post_procesado_aldex.filtrado(genera.abs, phylum.abs)
+  datos.microbiota.filt <-
+    post_procesado_aldex.t.filtrado(genera.abs, phylum.abs)
+  datos.microbiota.bayesianos <-
+    post_procesado_bayesian(genera.abs, phylum.abs)
+  
+  genero.clr <- datos.microbiota.bayesianos$genero.clr
+  genero.ilr <- datos.microbiota.bayesianos$genero.ilr
+  filo.clr <- datos.microbiota.bayesianos$filo.clr
+  filo.ilr <- datos.microbiota.bayesianos$filo.ilr
+  
+  genero.aldex.t <- datos.microbiota.t$genero
+  filo.adlex.t <- datos.microbiota.t$filo
+  genus.abs <- datos.microbiota.t$genus.abs
+  phylum.abs <- datos.microbiota.t$phylum.abs
+  genero.aldex <- datos.microbiota$genero
+  
+  filo.adlex <- datos.microbiota$filo
+  genero.aldex.t <- datos.microbiota.t$genero
+  filo.adlex.t <- datos.microbiota.t$filo
+  
+  genus.abs.filt <- datos.microbiota.t.filt$genus.abs
+  phylum.abs.filt <- datos.microbiota.t.filt$phylum.abs
+  genero.aldex.t.filt <- datos.microbiota.filt$genero
+  filo.adlex.t.filt <- datos.microbiota.filt$filo
+  genero.aldex.filt <- datos.microbiota.t.filt$genero
+  filo.adlex.filt <- datos.microbiota.t.filt$filo
+  
+  microbiota <- list(
+    bayes.clr = list(filo.clr = filo.clr,
+                     genero.clr = genero.clr),
+    aldex = list(filo.adlex = filo.adlex,
+                 genero.aldex = genero.aldex),
+    aldex.t = list(filo.adlex.t = filo.adlex.t,
+                   genero.aldex.t = genero.aldex.t),
+    aldex.filt = list(filo.adlex.filt = filo.adlex.filt,
+                      genero.aldex.filt = genero.aldex.filt),
+    aldex.filt.t = list(
+      filo.adlex.t.filt = filo.adlex.t.filt,
+      genero.aldex.t.filt = genero.aldex.t.filt
+    )
+  )
+  
+  
+  metaboloma.comun <-pretratado_metaboloma(
+    metabolome = metabolome,
+    variables_in_bacteria = variables_in_bacteria,
+    general_data = general_data,
+    common = T
+  )
+  metaboloma.total <-pretratado_metaboloma(
+    metabolome = metabolome,
+    variables_in_bacteria = variables_in_bacteria,
+    general_data = general_data,
+    common = F
+  )
+  
+  metaboloma <- list(metaboloma.comun=metaboloma.comun,
+                     metaboloma.total=metaboloma.total)
+  
+  totales <- list(clinicos=datos.clinicos.totales,
+                  ip = datos.IP.totales,
+                  metaboloma=metaboloma.total,
+                  grupo=general_data$GROUP,
+                  obesidad=general_data$OBESE)
+  comunes <- list(clinicos=datos.clinicos.comunes,
+                  ip = datos.IP.comunes,
+                  metaboloma=metaboloma.comun,
+                  microbiota=microbiota,
+                  grupo=variables_in_bacteria$GROUP,
+                  obesidad=variables_in_bacteria$OBESE)
+  
+  
+  
+  retorno <- list(totales=totales,comunes=comunes)
   return(retorno)
 }
 
@@ -457,11 +837,13 @@ read_integromics <- function(ruta){
 
 datos.integromics <- read_integromics("../../datos")
 
-if(!dir.exists("../../datos/resultados_analisis_datos_procesados")){
+if (!dir.exists("../../datos/resultados_analisis_datos_procesados")) {
   dir.create("../../datos/resultados_analisis_datos_procesados")
 }
 
-saveRDS(datos.integromics,file.path("../../datos/resultados_analisis_datos_procesados/datos_integromics_procesados.rds"))
-
-
-
+saveRDS(
+  datos.integromics,
+  file.path(
+    "../../datos/resultados_analisis_datos_procesados/datos_integromics_procesados.rds"
+  )
+)

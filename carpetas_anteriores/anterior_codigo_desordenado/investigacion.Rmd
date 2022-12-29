@@ -991,7 +991,6 @@ pairwise.wilcox.test(metaboloma$Alanine_mean,interaccion,p.adjust.method = "BH")
 
 
 ```{r}
-library(zCompositions)
 
 
 genus.imput <-cmultRepl(X = genus.abs,label = 0,output = "p-counts")
